@@ -12,12 +12,12 @@ import qualified Lucid.Svg.Attributes as A
 import           Shadow
 
 main :: IO ()
-main = L.renderToFile "test.svg" (svg . mconcat $ flip map [0] $ \x ->
-                                     mconcat (flip map [0 .. 6] $ \y ->
-                                       gTranslate (70 * y) (70 * y) (testWedge x y)))
+main = L.renderToFile "test.svg" (svg . dropShadow 2 2 2 . mconcat $ flip map [-4,-3 .. 4] $ \x ->
+                                     mconcat (flip map [-4, -3 .. 4] $ \y ->
+                                       gTranslate (100 * x) (100 * y) (testWedge x y)))
 
 testWedge :: Double -> Double -> Svg ()
-testWedge a0 a1 = taurusWedge (TaurusWedgeSpec 0 0 7 25 a0 a1)
+testWedge a0 a1 = taurusWedge (TaurusWedgeSpec 0 0 15 35 a0 a1)
 
 svg :: L.Svg () -> L.Svg ()
 svg content = do
@@ -26,7 +26,7 @@ svg content = do
 
 gTranslate :: Double -> Double -> Svg () -> Svg ()
 gTranslate dx dy content = with (g_ content) [transform_ transString]
-  where transString = mconcat $ ["translate(", s dx, ",", s dy, ")"]
+  where transString = T.pack . mconcat $ ["translate(", s dx, ",", s dy, ")"]
 
 data TaurusWedgeSpec = TaurusWedgeSpec {
     tsX  :: Double
@@ -37,14 +37,11 @@ data TaurusWedgeSpec = TaurusWedgeSpec {
   , tsT1 :: Double
   } deriving (Eq, Show)
 
-s :: (RealFrac a, Show a) => a -> T.Text
-s = T.pack . show . floor
+s :: (RealFrac a, Show a) => a -> String
+s = show . floor
 
-f :: (RealFrac a, Show a) => a -> T.Text
-f = T.pack . show
-
-sR2 :: (RealFrac a, Show a) => (a,a) -> T.Text
-sR2 (x,y) = mconcat [s x, " ", s y]
+sR2 :: (RealFrac a, Show a) => (a,a) -> String
+sR2 (x,y) = s x ++ " " ++ s y
 
 taurusWedge :: TaurusWedgeSpec -> L.Svg ()
 taurusWedge TaurusWedgeSpec{..} =
@@ -52,14 +49,14 @@ taurusWedge TaurusWedgeSpec{..} =
       p1  = (tsR1 * cos tsT0, tsR1 * sin tsT0)
       p2  = (tsR1 * cos tsT1, tsR1 * sin tsT1)
       p3  = (tsR0 * cos tsT1, tsR0 * sin tsT1)
-      largeArc = if (tsT1 - tsT0) `mod'` (2*pi) < pi then "0" else "1"
+      largeArc = if (tsT1 - tsT0) `mod'` (2*pi) < pi then "1" else "0"
       d  = mconcat ["M", s (fst p0), " ", s (snd p0), " "
                    ,"L ", s (fst p1), " ", s (snd p1)," "
-                   ,"A ", s tsR1, " ", s tsR1, " 0 ", largeArc, " 1 ", s (fst p2), " ", s (snd p2), " "
+                   ,"A ", s tsR1, " ", s tsR1, " 0 ", largeArc, " 0 ", s (fst p2), " ", s (snd p2), " "
                    ,"L ", s (fst p3), " ", s (snd p3)
-                   ,"A ", s tsR0, " ", s tsR0, " 0 ", largeArc, " 0 ", s (fst p0), " ", s (snd p0)
-                   ] :: T.Text
+                   ,"A ", s tsR0, " ", s tsR0, " 0 ", largeArc, " 1 ", s (fst p0), " ", s (snd p0)
+                   ] :: String
+      -- dHtml = L.toHtml (T.pack d) :: L.Svg ()
       taur0 = do
-        L.path_ [L.d_ d]
-        circle_ [cx_ (s (fst p0)), cy_ (s (snd p0)), r_ "3", fill_ "red"]
+        L.path_ [L.d_ (T.pack d)]
   in taur0

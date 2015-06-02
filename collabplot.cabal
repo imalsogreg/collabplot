@@ -17,7 +17,7 @@ cabal-version:       >=1.10
 
 executable collabplot
   main-is:             Main.hs
-  -- other-modules:       
+  other-modules:       Shadow
   -- other-extensions:    
   build-depends:       base      >= 4.8 && < 4.9,
                        lucid-svg >= 0.4 && < 0.5,
