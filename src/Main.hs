@@ -29,12 +29,12 @@ main = L.renderToFile "test.svg" . svg $ do
       tWedge i tn  = textWedge
                      (TextWedge tn (i*(2*pi/n)) (2*pi/n - 0.05)
                       150 200 [] [fill_ "hsl(150,50%,75%)", stroke_ "none"])
-  dropShadow 2 2 4 $ g_ $ mconcat $ zipWith tWedge [0..] thrusts
+  dropShadow 2 2 4 "black" $ g_ $ mconcat $ zipWith tWedge [0..] thrusts
 
-  dropShadow 2 2 4 $
+  dropShadow 2 2 4 "black" $
     textWedge' (TextWedge "Kanwisher"  0      0.25 210 350
                 [] [fill_ "hsl(100,50%,50%)", stroke_ "none"])
-  dropShadow 2 2 4 $
+  dropShadow 2 2 4 "black" $
     textWedge' (TextWedge "Tennenbaum" (pi/1.2) 0.25 210 350
                 [] [fill_ "hsl(100,50%,50%)", stroke_ "none"])
 

@@ -7,21 +7,22 @@ import qualified Data.Text as T
 import Lucid.Svg
 import qualified Lucid.Svg.Attributes as A
 import qualified Lucid.Svg.Elements   as E
+import Utils
 
 
-shadowDefs :: Int -> Int -> Int -> T.Text -> Svg ()
-shadowDefs x y blur filtId = defs_ $ do
+shadowDefs :: Double -> Double -> Double -> T.Text -> T.Text -> Svg ()
+shadowDefs x y blur color filtId = defs_ $ do
   (term "filter") fParams $ do
     feOffset_       [result_ "offOut", in_ "SourceAlpha"
-                    , dx_ (T.pack $ show x), dy_ (T.pack $ show y)]
-    feColorMatrix_  [result_ "matrixOut", in_ "offOut"
-                    , type_ "matrix"
-                    , values_ "1 0 0 0 0   0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"]
-    --feFlood_        [result_ "floodOut", in_ "offOut"
-    --                , flood_color_ "rgba(0,0,0,0.1)"
-    --                , flood_opacity_ "1"]
-    feGaussianBlur_ [result_ "blurOut", in_ "matrixOut"
-                    , stdDeviation_ (T.pack $ show blur)]
+                    , dx_ (f x), dy_ (f y)]
+    --feColorMatrix_  [result_ "matrixOut", in_ "offOut"
+    --                , type_ "matrix"
+    --                , values_ "1 0 0 0 0   0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"]
+    feFlood_        [result_ "floodOut", in_ "offOut"
+                    , flood_color_ color
+                    , flood_opacity_ "1"]
+    feGaussianBlur_ [result_ "blurOut", in_ "floodOut"
+                    , stdDeviation_ (f blur)]
     feBlend_        [in_ "SourceGraphic", in2_ "blurOut"
                     , mode_ "normal"]
   where
@@ -29,9 +30,9 @@ shadowDefs x y blur filtId = defs_ $ do
               , width_ "200%" , height_ "200%"]
 
 
-dropShadow x y blur el = do
-  shadowDefs x y blur filtName
+dropShadow x y blur color el = do
+  shadowDefs x y blur color filtName
   with el [A.filter_ filtUrl]
-  where filtName = T.pack $ "shadowFiltX" ++ show x ++ "Y" ++ show y
-                            ++ "B" ++ show blur
+  where filtName = mconcat [ "shadowFiltX", f x, "Y", f y
+                           , "B", f blur, "C", color]
         filtUrl = T.concat ["url(#", filtName, ")"]
