@@ -28,10 +28,6 @@ shadowDefs x y blur filtId = defs_ $ do
     fParams = [ id_ filtId , x_ "-0.5" , y_ "-0.5"
               , width_ "200%" , height_ "200%"]
 
---svg :: Svg () -> Svg ()
---svg content = do
---  with (svg11_ (content))
---    [version_ "1.1", width_ "700", height_ "500"]
 
 dropShadow x y blur el = do
   shadowDefs x y blur filtName
