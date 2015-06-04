@@ -91,8 +91,8 @@ highLine th0 th1 radius height = path_ [d_ d]
         (x1,y1)   = (radius * cos th1, radius * sin th1)
         dx        = x1 - x0
         dy        = y1 - y0
-        slopeX th = height * cos th / 2
-        slopeY _  = (-1) * height
+        slopeX th = 0 -- height * cos th / 2
+        slopeY _  = (-1) * height * abs (circularDist th0 th1 / 2)
         d = T.unwords ["M" <> f x0, f y0
                       ,"c", f (slopeX th0), f (slopeY th0) <> ","
                       ,     f (slopeX th1 + dx), f (slopeY th1 + dy) <> ","

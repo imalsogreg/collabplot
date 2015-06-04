@@ -18,13 +18,18 @@ shadowDefs x y blur color filtId = defs_ $ do
     --feColorMatrix_  [result_ "matrixOut", in_ "offOut"
     --                , type_ "matrix"
     --                , values_ "1 0 0 0 0   0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"]
-    feFlood_        [result_ "floodOut", in_ "offOut"
+    feFlood_        [result_ "floodOut"
                     , flood_color_ color
                     , flood_opacity_ "1"]
-    feGaussianBlur_ [result_ "blurOut", in_ "floodOut"
+    feGaussianBlur_ [result_ "blurOut", in_ "offOut"
                     , stdDeviation_ (f blur)]
-    feBlend_        [in_ "SourceGraphic", in2_ "blurOut"
-                    , mode_ "normal"]
+    feComposite_    [result_ "shadowOut"
+                    ,in_ "floodOut", in2_ "blurOut", operator_ "in"]
+    feBlend_        [in_ "SourceGraphic", in2_ "shadowOut", mode_ "normal"]
+--    feGaussianBlur_ [result_ "blurOut", in_ "floodOut"
+--                    , stdDeviation_ (f blur)]
+--    feBlend_        [in_ "SourceGraphic", in2_ "blurOut"
+--                    , mode_ "normal"]
   where
     fParams = [ id_ filtId , x_ "-0.5" , y_ "-0.5"
               , width_ "200%" , height_ "200%"]

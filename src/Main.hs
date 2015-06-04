@@ -37,8 +37,16 @@ main = L.renderToFile "test.svg" . svg $ do
   dropShadow 2 2 4 "black" $
     textWedge' (TextWedge "Tennenbaum" (pi/1.2) 0.25 210 350
                 [] [fill_ "hsl(100,50%,50%)", stroke_ "none"])
+  dropShadow 2 2 4 "black" $
+    textWedge' (TextWedge "Saxe" (pi/4.2) 0.25 210 350
+                [] [fill_ "hsl(100,50%,50%)", stroke_ "none"])
 
-  with (highLine 0 (pi/1.2) 350 400) [fill_ "none", stroke_ "yellow"]
+  dropShadow 0 0 2 "yellow" $ with (highLine 0 (pi/1.2) 350 400)
+    [fill_ "none", stroke_ "yellow", stroke_width_ "2px"]
+  dropShadow 0 0 2 "yellow" $ with (highLine 0 (pi/4.2) 350 400)
+    [fill_ "none", stroke_ "yellow", stroke_width_ "2px"]
+  dropShadow 0 0 2 "yellow" $ with (highLine (pi/4.2) (pi/1.2) 350 400)
+    [fill_ "none", stroke_ "yellow", stroke_width_ "1px"]
 
 ------------------------------------------------------------------------------
 data TextWedge = TextWedge {
