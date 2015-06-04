@@ -17,8 +17,8 @@ import           Model
 
 
 ------------------------------------------------------------------------------
-thrusts :: [T.Text]
-thrusts = ["Development","Circuits","Social","Theory","Vision"]
+defThrusts :: [T.Text]
+defThrusts = ["Development","Circuits","Social","Theory","Vision"]
 
 
 ------------------------------------------------------------------------------
@@ -27,27 +27,32 @@ main = L.renderToFile "test.svg" . svg $ do
 
   bkgnd
 
-  let n            = fromIntegral $ length thrusts
+  let n            = fromIntegral $ length defThrusts
       tWedge i tn  = textWedge
                      (TextWedge tn (i*(2*pi/n)) (2*pi/n - 0.05)
-                      150 200 [] [fill_ "hsl(150,50%,75%)", stroke_ "none"])
-  dropShadow 2 2 4 "black" $ g_ $ mconcat $ zipWith tWedge [0..] thrusts
+                      (piBig + 5) (piBig + 70) [] [fill_ "hsl(150,50%,75%)", stroke_ "none"])
+      piBig        = 250
+      piSmall      = 100
+      thetaTenn    = 3*pi/2
+      thetaKanw    = 0
+      thetaSaxe    = pi/1.2
+  dropShadow 2 2 4 "black" $ g_ $ mconcat $ zipWith tWedge [0..] defThrusts
 
   dropShadow 2 2 4 "black" $
-    textWedge' (TextWedge "Kanwisher"  0      0.25 210 350
+    textWedge' (TextWedge "Kanwisher"  thetaKanw  0.25 piSmall piBig
                 [] [fill_ "hsl(100,50%,50%)", stroke_ "none"])
   dropShadow 2 2 4 "black" $
-    textWedge' (TextWedge "Tennenbaum" (pi/1.2) 0.25 210 350
+    textWedge' (TextWedge "Tennenbaum" thetaTenn 0.25 piSmall piBig
                 [] [fill_ "hsl(100,50%,50%)", stroke_ "none"])
   dropShadow 2 2 4 "black" $
-    textWedge' (TextWedge "Saxe" (pi/4.2) 0.25 210 350
+    textWedge' (TextWedge "Saxe" thetaSaxe 0.25 piSmall piBig
                 [] [fill_ "hsl(100,50%,50%)", stroke_ "none"])
 
-  dropShadow 0 0 2 "yellow" $ with (highLine 0 (pi/1.2) 350 400)
+  dropShadow 0 0 2 "yellow" $ with (highLine thetaKanw thetaTenn piBig 100)
     [fill_ "none", stroke_ "yellow", stroke_width_ "2px"]
-  dropShadow 0 0 2 "yellow" $ with (highLine 0 (pi/4.2) 350 400)
+  dropShadow 0 0 2 "yellow" $ with (highLine thetaKanw thetaSaxe piBig 100)
     [fill_ "none", stroke_ "yellow", stroke_width_ "2px"]
-  dropShadow 0 0 2 "yellow" $ with (highLine (pi/4.2) (pi/1.2) 350 400)
+  dropShadow 0 0 2 "yellow" $ with (highLine thetaTenn thetaSaxe piBig 100)
     [fill_ "none", stroke_ "yellow", stroke_width_ "1px"]
 
 ------------------------------------------------------------------------------

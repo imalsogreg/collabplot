@@ -8,18 +8,13 @@ import Data.Aeson
 import qualified Data.Text as T
 import Model
 
+{- 
 instance FromRecord Thrust
+instance FromNamedRecord Thrust
 instance ToRecord Thrust
-instance ToJSON Thrust
-instance FromJSON Thrust
+instance ToNamedRecord Thrust
 instance FromRecord PI
 instance ToRecord PI
-instance ToJSON PI
-instance FromJSON PI
-instance FromRecord Member
-instance ToRecord Member
-instance ToJSON Member
-instance FromJSON Member
 
 instance FromRecord Project where
   parseRecord v
@@ -36,5 +31,4 @@ instance ToRecord Project where
     , toField gitHub
     ]
 
-instance ToJSON Project
-instance FromJSON Project
+-}
