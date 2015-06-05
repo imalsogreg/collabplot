@@ -1,19 +1,26 @@
-{ thrusts: ["Social","Theory","Vision","Circuits","Development"],
-  pis: [ {name: "Kanwisher",
-          thrust: "Vision"},
-         {name: "Tennenbaum",
-          thrust: "Theory"},
-         {name: "Saxe",
-          thrust: "Development"},
-         {name: "Wilson",
-          thrust: "Circuits"},
-       ],
-  members: [ {name: "Hector Penagos",
-              pi:   "Wilson"},
-             {name: "Ilker Yildirim",
-              pi:   "Tennenbaum"}
-           ],
-  projects: [ {title: "Topology of hippocampal representations"
-               , members: ["Hector Penagos", "Samuel Gershman"]}
-            ]
+{
+    "thrusts": ["Social","Theory","Vision","Circuits","Development"],
+    "pis": [
+        {"name": "Kanwisher",
+         "thrust": "Vision"},
+        {"name": "Tennenbaum",
+         "thrust": "Theory"},
+        {"name": "Saxe",
+         "thrust": "Development"},
+        {"name": "Wilson",
+         "thrust": "Circuits"}
+    ],
+
+    "members": [
+        {"name": "Hector Penagos",
+         "pi":   "Wilson"},
+        {"name": "Ilker Yildirim",
+         "pi":   "Tennenbaum"}
+    ],
+
+    "projects": [
+        {"name": "Topology of hippocampal representations",
+         "memberNames": ["Hector Penagos", "Samuel Gershman"]
+        }
+    ]
 }
