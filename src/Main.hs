@@ -19,7 +19,6 @@ import           Model
 defThrusts :: [T.Text]
 defThrusts = ["Development","Circuits","Social","Theory","Vision"]
 
-
 ------------------------------------------------------------------------------
 main :: IO ()
 main = L.renderToFile "test.svg" . svg $ do
