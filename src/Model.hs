@@ -45,22 +45,19 @@ data MemberGroup = MemberPI     T.Text
                  | MemberThrust T.Text
                    deriving (Eq, Ord, Show)
 
---instance ToJSON MemberGroup where
---  toJSON (MemberPI mPi)   = "pi"     .= mPi
---  toJSON (MemberThrust t) = "thrust" .= t
-
---instance FromJSON MemberGroup where
---  parseJSON (Object v) = case HM.keys v of
---    ["pi"]     -> MemberPI     <$> v .: "pi"
---    ["thrust"] -> MemberThrust <$> v .: "thrust"
---    _          -> mzero
---  parseJSON _          = mzero
-
 data Member = Member {
     memberName     :: !T.Text
   , memberGroup    :: MemberGroup
   , memberGithubId :: Maybe T.Text
   } deriving (Eq, Ord, Show, Generic)
+
+isOrphan :: Member -> Bool
+isOrphan (Member _ (MemberPI     _) _) = False
+isOrphan (Member _ (MemberThrust _) _) = True
+
+memberPI :: Member -> Maybe T.Text
+memberPI (Member _ (MemberPI     p) _) = Just p
+memberPI (Member _ (MemberThrust _) _) = Nothing
 
 instance ToJSON Member where
   toJSON (Member n grp g) =

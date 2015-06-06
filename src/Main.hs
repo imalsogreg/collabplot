@@ -1,18 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Main where
 
-import           Data.Fixed           (mod')
+import           Data.Fixed       (mod')
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as BSL
 import           Data.Monoid
+import qualified Data.Text        as T
 import           Data.Traversable
-import qualified Data.Text            as T
+import           Figure
 import           Lucid.Svg
-import qualified Lucid.Svg            as L
+import qualified Lucid.Svg        as L
+import           Model
 import           Primitives
 import           Shadow
 import           Utils
-import           Model
 
 
 ------------------------------------------------------------------------------
@@ -21,10 +24,17 @@ defThrusts = ["Development","Circuits","Social","Theory","Vision"]
 
 ------------------------------------------------------------------------------
 main :: IO ()
-main = L.renderToFile "test.svg" . svg $ do
+main = do
+  b <- BSL.readFile "collabdata/model.json"
+  case A.decode b of
+    Nothing -> error "Json decode error"
+    Just m  -> do
+      print m
+      L.renderToFile "test.svg" . svg $ do
 
-  bkgnd
-
+        bkgnd
+        modelSvg m
+  {-
   let n            = fromIntegral $ length defThrusts
       tWedge i tn  = textWedge
                      (TextWedge tn (i*(2*pi/n)) (2*pi/n - 0.05)
@@ -52,36 +62,7 @@ main = L.renderToFile "test.svg" . svg $ do
     [fill_ "none", stroke_ "yellow", stroke_width_ "2px"]
   dropShadow 0 0 2 "yellow" $ with (highLine thetaTenn thetaSaxe piBig 100)
     [fill_ "none", stroke_ "yellow", stroke_width_ "1px"]
-
-------------------------------------------------------------------------------
-data TextWedge = TextWedge {
-    twText       :: T.Text
-  , twTheta      :: Double
-  , twWidth      :: Double
-  , twInner      :: Double
-  , twOuter      :: Double
-  , twTextAttrs  :: [Attribute]
-  , twBkgndAttrs :: [Attribute]
-  } deriving (Eq, Show)
-
-
-------------------------------------------------------------------------------
-textWedge :: TextWedge -> Svg ()
-textWedge TextWedge{..} = g_ $ do
-  (with $ taurusWedge
-   (TaurusWedgeSpec 0 0
-    twInner twOuter twTheta twWidth) False)
-    twBkgndAttrs
-  textOnCircle twText twTextAttrs (twInner/2 + twOuter/2) twTheta Nothing
-
-textWedge' :: TextWedge -> Svg ()
-textWedge' TextWedge{..} = g_ $ do
-  (with $ taurusWedge
-   (TaurusWedgeSpec 0 0
-    twInner twOuter twTheta twWidth) True)
-    twBkgndAttrs
-  textOnCircle twText twTextAttrs (twOuter/2 + twInner/2)
-    twTheta (Just $ twOuter - twInner)
+-}
 
 svgHeight, svgWidth :: Double
 svgHeight = 800

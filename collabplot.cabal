@@ -17,11 +17,12 @@ cabal-version:       >=1.10
 
 executable collabplot
   main-is:             Main.hs
-  other-modules:       Shadow, Primitives, Utils, Model
+  other-modules:       Shadow, Primitives, Utils, Model, Figure
   -- other-extensions:    
   build-depends:       base      >= 4.8 && < 4.9,
                        aeson     >= 0.8 && < 0.10,
                        bytestring,
+                       containers,
                        cassava   >= 0.4 && < 0.5,
                        json-schema >= 0.7 && < 0.8,
                        lucid-svg >= 0.4 && < 0.5,

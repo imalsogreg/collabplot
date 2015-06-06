@@ -7,6 +7,8 @@
          "thrust": "Theory"},
         {"name": "Saxe",
          "thrust": "Development"},
+        {"name": "Spelke",
+         "thrust": "Development"},
         {"name": "Wilson",
          "thrust": "Circuits"}
     ],
