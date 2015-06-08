@@ -1,28 +1,54 @@
 {
     "thrusts": ["Social","Theory","Vision","Circuits","Development"],
     "pis": [
+        {"name": "Boyden",
+         "thrust": "Circuits"},
         {"name": "Kanwisher",
-         "thrust": "Vision"},
+         "thrust": "Social"},
+        {"name": "Nakayama",
+         "thrust":"Vision"},
+        {"name": "Rosasco",
+         "thrust": "Theory"},
         {"name": "Tennenbaum",
          "thrust": "Theory"},
+        {"name": "Sampolinski",
+         "thrust": "theory"},
         {"name": "Saxe",
-         "thrust": "Development"},
+         "thrust": "Social"},
         {"name": "Spelke",
          "thrust": "Development"},
         {"name": "Wilson",
-         "thrust": "Circuits"}
+         "thrust": "Circuits"},
+        {"name": "Kreiman",
+         "thrust": "Circuits"},
+        {"name": "Poggio",
+         "thrust": "Vision"},
+        {"name": "Schulz",
+         "thrust": "Development"},
+        {"name": "Ullman",
+         "thrust": "Theory"},
+        {"name": "Valiant",
+         "thrust": "Theory"}
     ],
 
     "members": [
         {"name": "Hector Penagos",
          "pi":   "Wilson"},
         {"name": "Ilker Yildirim",
-         "pi":   "Tennenbaum"}
+         "pi":   "Tennenbaum"},
+        {"name": "Samuel Gershman",
+         "pi": "Tennenbaum"},
+        {"name": "Fabian",
+         "thrust": "Circuits"},
+        {"name": "Ben Deen",
+         "pi": "Kanwisher"}
     ],
 
     "projects": [
         {"name": "Topology of hippocampal representations",
          "memberNames": ["Hector Penagos", "Samuel Gershman"]
-        }
+        },
+        {"name": "Make-believe project",
+         "memberNames": ["Hector Penagos","Ben Deen","Ilker Yildirim"]}
     ]
 }
