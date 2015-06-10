@@ -1,0 +1,27 @@
+body {
+    background-color: #0f2d2d;
+}
+
+.collabLine path:hover {
+    stroke: white;
+
+}
+
+.main-figure {
+    float: left;
+}
+
+.synopsis {
+    float: left;
+    background-color: rgba(0,0,0,0.25);
+    border-radius: 10px;
+}
+
+.synopsis table tr {
+    font-size: 14pt;
+    color: white;
+}
+
+.field {
+    text-align: right;
+}

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards   #-}
 
 module Figure where
@@ -185,11 +186,23 @@ collabLines m@Model{..} =
 
 projectLine :: Map T.Text Double -> Project -> Svg ()
 projectLine angMap p@Project{..} =
-  let thisAngs = catMaybes $ map (flip Map.lookup angMap) projectMembers
-      collabLine a0 a1 =
-        dropShadow 0 0 2 "yellow" $
-        with (highLine a0 a1 (piRadiusMin figOpts) 100)
-        [fill_ "none", stroke_ "yellow", stroke_width_ "2px"]
+  let thisAngs       = catMaybes $
+                       map (flip Map.lookup angMap) projectMembers
+      visLineAttrs   = [fill_ "none", stroke_ "yellow"
+                       , stroke_width_ "2"]
+      hidLineAttrs   = [fill_ "none", stroke_ "rgba(0,0,0,0)"
+                       , stroke_width_ "5"]
+      lineGroupAttrs = [id_ (textEncode projectName)
+                       ,class_ "collabLine"]
+      lineBase a0 a1 = highLine a0 a1 (piRadiusMin figOpts) 100
+      collabLine a0 a1 = with (term "g")  lineGroupAttrs $ do
+        dropShadow 0 0 2 "yellow" $ with (lineBase a0 a1) visLineAttrs
+        with (lineBase a0 a1) hidLineAttrs
+--        with (highLine a0 a1 (piRadiusMin figOpts) 100)
+--        [fill_ "none", stroke_ "yellow"
+--        , stroke_width_ "2px"
+--        , id_ (textEncode (projectName))
+--        , class_ "collabLine"]
   in mconcat [collabLine a0 a1 | a0 <- thisAngs , a1 <- thisAngs , a1 > a0]
 
 
@@ -232,6 +245,3 @@ textWedge' TextWedge{..} = g_ $ do
     twBkgndAttrs
   textOnCircle twText twTextAttrs (twOuter/2 + twInner/2)
     twTheta (Just $ twOuter - twInner)
-
-
-  

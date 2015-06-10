@@ -17,16 +17,23 @@ cabal-version:       >=1.10
 
 executable collabplot
   main-is:             Main.hs
-  other-modules:       Shadow, Primitives, Utils, Model, Figure
+  other-modules:       Shadow, Primitives, Utils, Model, Figure, Page
   -- other-extensions:    
   build-depends:       base      >= 4.8 && < 4.9,
                        aeson     >= 0.8 && < 0.10,
                        bytestring,
+                       base64-bytestring,
                        containers,
+                       data-hash,
+                       HTTP,
                        cassava   >= 0.4 && < 0.5,
+                       jmacro,
                        json-schema >= 0.7 && < 0.8,
+                       js-jquery,
+                       lucid >= 2.9 && < 2.10,
                        lucid-svg >= 0.4 && < 0.5,
                        text,
+                       transformers,
                        unordered-containers,
                        vector
   hs-source-dirs:      src

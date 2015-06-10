@@ -3,6 +3,7 @@
 module Utils where
 
 import Data.Fixed (mod')
+import Data.Hash
 import qualified Data.Text as T
 import           Lucid.Svg
 
@@ -34,3 +35,7 @@ angleFrac (th0, th1) frac
 
 angleDiff :: AngleRange -> Double
 angleDiff (th0, th1) = (th1 - th0) `mod'` (2*pi)
+
+textEncode :: T.Text -> T.Text
+textEncode = T.pack . show . asWord64 . hash . T.unpack
+
