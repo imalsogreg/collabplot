@@ -73,7 +73,6 @@ routes = [ ("/login",    with auth handleLoginSubmit)
          , ("/thrusts", handleThrusts)
          , ("/thrust",  handleThrust)
 
-         , ("/test", handleATest)
          , ("",          serveDirectory "static")
          ]
 
