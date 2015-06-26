@@ -1,11 +1,12 @@
-all: static/collaborations.svg static/collaborations.html
+SERVER=server/dist/build/server/server
+CLIENT=server/static/all.js
 
-static/collaborations.svg: src/*.hs collabdata/model.json
-	cabal build
-	dist/build/collabplot/collabplot collabdata/model.json
-	mv collaborations.svg static/
+all: $SERVER $CLIENT
 
-static/collaborations.html: src/*.hs collabdata/model.json
+$SERVER: server/server.cabal server/src/*.hs
 	cabal build
-	dist/build/collabplot/collabplot collabdawa/model.json
-	mv collaborations.html static/
+
+$CLIENT: client/collabplot.cabal client/*.hs
+	cabal configure client --ghcjs
+  cabal build client
+	cp client/dist/build/collabplot/collabplot.jsexe/*.js sever/static/
