@@ -12,14 +12,20 @@ import Data.Foldable
 import Data.Monoid
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Language.Javascript.JMacro
-import qualified Language.Javascript.JQuery as JQuery
 import Lucid
 import qualified Lucid as L
 import Lucid.Svg (Svg(..))
 import Model
 import Utils
 import Network.HTTP.Base (urlEncode, urlDecode)
+import Reflex
+import Reflex.Dom
+
+pageWidget :: (MonadWidget t m) => m ()
+pageWidget = do
+  menuEvents <- menusWidget pictureEvents
+  infoWidget menuEvents
+  pictureEvents <- pictureWidget menuEvents
 
 
 ------------------------------------------------------------------------------
@@ -40,7 +46,3 @@ page jsPath Model{..} figSvg = html_ $ do  -- Todo drop filepath thing
           tr_ $ td_ [class_ "field"] "Members:"      <> td_ [class_ "val"] (foldMap toHtml $ projectMembers p)
     (termWith "script" [src_ (T.pack "collab.js")] (return ()))
 
---collabClick = renderJs [$jmacro| $(".collabLine").on("click", function(){
---    console.log( $(this).text() );
---  });
--- |]

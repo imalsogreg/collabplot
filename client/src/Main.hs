@@ -3,6 +3,7 @@
 
 module Main where
 
+import Control.Concurrent
 import qualified Data.Aeson                 as A
 import qualified Data.ByteString.Lazy       as BSL
 import           Data.Fixed                 (mod')
@@ -10,9 +11,16 @@ import           Data.Monoid
 import qualified Data.Text                  as T
 import           Data.Traversable
 import           Figure
-import qualified Language.Javascript.JQuery as JQuery
 import           Lucid                      as L
 import qualified Lucid.Svg                  as LSvg
+
+import GHCJS.DOM
+import GHCJS.DOM.Document
+import GHCJS.DOM.HTMLDocument
+import GHCJS.DOM.Element
+import GHCJS.DOM.HTMLElement
+import Reflex.Dom
+
 import           Model
 import           Page
 import           Primitives
@@ -20,17 +28,26 @@ import           Shadow
 import           Utils
 
 
-------------------------------------------------------------------------------
+-- ------------------------------------------------------------------------------
+-- main :: IO ()
+-- main = do
+--   b      <- BSL.readFile "collabdata/model.json"
+--   jqPath <- JQuery.file
+--   case A.decode b of
+--     Nothing -> error "Json decode error"
+--     Just m  -> do
+--       L.renderToFile "collaborations.html" $
+--         page jqPath m (svg (bkgnd <> modelSvg m))
+
 main :: IO ()
 main = do
-  b      <- BSL.readFile "collabdata/model.json"
-  jqPath <- JQuery.file
-  case A.decode b of
-    Nothing -> error "Json decode error"
-    Just m  -> do
-      L.renderToFile "collaborations.html" $
-        page jqPath m (svg (bkgnd <> modelSvg m))
-
+  runWebGUI <- $ \webView -> do
+    doc <- waitUntilJust $ liftM (fmap castToHTMLDocument) $
+           webViewGetDocument webView
+    let btag = "reflex-area" :: String
+    root <- waitUntilJust $ liftM (fmap castToHTMLElement) $
+            documentGetElementById doc btag
+    attachWidget root webView pageWidget
 
 svgHeight, svgWidth :: Double
 svgHeight = 800
@@ -55,3 +72,11 @@ svg content = do
   LSvg.with (LSvg.svg11_ (gTranslate 400 400 content))
     [LSvg.version_ "1.1", LSvg.width_ "800", LSvg.height_ "800"]
 
+waitUntilJust :: IO (Maybe a) -> IO a
+waitUntilJust a = do
+  mx <- a
+  case mx of
+    Just x -> return x
+    Nothing -> do
+      threadDelay 10000
+      waitUntilJust a

@@ -9,7 +9,6 @@ import Control.Monad (mzero)
 import GHC.Generics
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM
-import qualified Data.JSON.Schema as JS
 import Data.Maybe
 import qualified Data.Text as T
 

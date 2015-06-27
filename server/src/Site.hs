@@ -70,9 +70,13 @@ routes = [ ("/login",    with auth handleLoginSubmit)
          , ("/logout",   with auth handleLogout)
          , ("/new_user", with auth handleNewUser)
 
-         , ("/thrusts", handleThrusts)
-         , ("/thrust",  handleThrust)
-
+         , ("/thrusts", with auth handleThrusts)
+         , ("/thrust/:id",  with auth handleThrust)
+         , ("/projects", with auth handleProjects)
+         , ("/project/:id", with auth handleProject)
+         , ("/members" , with auth handleMembers)
+         , ("/member/:id", with auth handleMember)
+         , ("/pis",      with auth handlePIs)
          , ("",          serveDirectory "static")
          ]
 

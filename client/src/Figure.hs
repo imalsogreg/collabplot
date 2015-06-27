@@ -13,7 +13,7 @@ import           Data.Maybe  (catMaybes)
 import           Data.Monoid
 import qualified Data.Text   as T
 import           Lucid.Svg
-import           Model
+import           CollabTypes
 import           Utils
 import           Primitives
 import           Shadow
@@ -57,31 +57,22 @@ thrustAngleRanges thrusts = Map.fromList $ zipWith f [0..] thrusts
                          - thrustWedgeSpacing figOpts
 
 ------------------------------------------------------------------------------
--- Make a map from PI name and orphan (Member without a PI) to
+-- Make a map from PI name to
 -- angle in the circle. This gets a bit messy due to the need
 -- to build up intermediate maps for the invididual thrusts
-piAndOrphanRanges :: Model -> (Map T.Text AngleRange, Map T.Text Double)
-piAndOrphanRanges m@Model{..} =
-  (\(mapsPI, mapsOrphan) -> (Map.unions mapsPI, Map.unions mapsOrphan))
-  . unzip . flip map thrusts $ \(Thrust thrust) ->
+piRanges :: Model -> (Map T.Text AngleRange)
+piRanges m@Model{..} =
+  Map.unions
+  . flip map _modelThrusts $ \t@Thrust{..} ->
 
-  let thisPis  = map piName $ filter ((== thrust) . piThrust) pis
+  let 
 
       (thrustT0,thrustT1) = maybe (error "piAndOrphan impossible case") id
-                            (Map.lookup (Thrust thrust) (thrustAngleRanges thrusts) )
+                            (Map.lookup t (thrustAngleRanges _modelThrusts) )
 
-      -- Keep the names of orphan members whose thrusts match this one
-      orphMayName = \thrName mem -> case memberGroup mem of
-        MemberPI      _     -> Nothing
-        MemberThrust tName
-          | tName == thrust -> Just (memberName mem)
-          | otherwise       -> Nothing
+      n          = fromIntegral $ length _thrustPIs :: Double
 
-      thisOrphs = catMaybes (map (orphMayName thrust) members)
-
-      n          = fromIntegral $ length thisPis + length thisOrphs :: Double
-
-      thrustRngs = thrustAngleRanges thrusts
+      thrustRngs = thrustAngleRanges _modelThrusts
       angRange   = (thrustT0,thrustT1)
 
       piWedgeWid = (angleDiff angRange - ((n-1) * piWedgeSpacing figOpts)) / n
@@ -89,50 +80,44 @@ piAndOrphanRanges m@Model{..} =
       piStarts i = i*(piWedgeWid + piWedgeSpacing figOpts) + thrustT0
       piStops  i = piStarts i + piWedgeWid
       piRanges   = map ((\i -> (piStarts i, piStops i)) . fromIntegral)
-                   [0.. (length thisPis) - 1]
+                   [0.. (length _thrustPIs) - 1]
 
-      piMap      = Map.fromList $ zip thisPis piRanges
+      piMap      = Map.fromList $ zip (map _piName _thrustPIs) piRanges
 
-      orphRanges = map ((\i -> (piStarts i, piStops i)) . fromIntegral)
-                   [length thisPis .. round n]
-      orphThetas = map (\(t0,t1) -> (t1+t0)/2) orphRanges
-      orphMap    = Map.fromList $ zip thisOrphs orphThetas
-
-  in  (piMap, orphMap)
+  in  piMap
 
 
 ------------------------------------------------------------------------------
 -- Map from PI name to names of children
 allPiChildren :: Model -> Map T.Text [T.Text]
 allPiChildren m@Model{..} =
-  let piChildren p = map memberName $
-                     filter ((== Just (piName p)) . memberPI) members
-  in  Map.fromList $ map (\p -> (piName p, piChildren p)) pis
+  let piChildren p = map _memberName $ _piMembers p
+  in  Map.fromList $ map (\p -> (_piName p, piChildren p))
+      (concatMap _thrustPIs _modelThrusts)
 
 ------------------------------------------------------------------------------
 -- Map from PI name to (Map from child name to angle)
 allPiMemberAngles :: Model -> Map T.Text (Map T.Text Double)
-allPiMemberAngles m@Model{..} = Map.fromList $ map (\p -> (piName p, aux p)) pis
-  where (piRanges, _) = piAndOrphanRanges m
-        aux p         = onePiMemberAngles m piRanges p
+allPiMemberAngles m@Model{..} = Map.fromList $ map (\p -> (_piName p, aux p)) (concatMap _thrustPIs _modelThrusts)
+  where aux p    = onePiMemberAngles m (piRanges m) p
 
 onePiMemberAngles :: Model -> Map T.Text AngleRange -> PI -> Map T.Text Double
-onePiMemberAngles m@Model{..} piRanges p@(PI pName _) =
+onePiMemberAngles m@Model{..} piRanges p@PI{..} =
   let range = maybe (error "onePiMemberAngles impossible case")
-              id (Map.lookup pName piRanges)
-      cs    = filter ( (== Just pName) . memberPI ) members
+              id (Map.lookup _piName piRanges)
+      --allPi = concatMap _thrustPIs _modelThrusts
+      --allMs = concatMap _piMembers allPi
+      cs    = _piMembers
       dt    = 1/ fromIntegral (length cs)
       fracs = take (length cs) [dt/2, 3*dt/2 ..]
-  in  Map.fromList $ zipWith (\i c -> (memberName c, angleFrac range i))
+  in  Map.fromList $ zipWith (\i c -> (_memberName c, angleFrac range i))
       fracs cs
 
 ------------------------------------------------------------------------------
 memberAngles :: Model -> Map T.Text Double
 memberAngles m@Model{..} =
-  let (piRngs, orphAngs)    = piAndOrphanRanges m
---  in  orphAngs <> mconcat (map (\p -> onePiMemberAngles m piRngs p) pis)
-  in orphAngs <> Map.unions (Map.elems (allPiMemberAngles m))
-
+  let piRngs = piRanges m
+  in Map.unions (Map.elems (allPiMemberAngles m))
 
 piWedge :: T.Text -> (AngleRange, Map T.Text Double) -> Svg ()
 piWedge pName (rng@(th0,th1), childAngs) =
@@ -146,16 +131,16 @@ piWedge pName (rng@(th0,th1), childAngs) =
     textOnCircle pName [font_size_ "18"] (r0/2 + r1/2) ang (Just $ r1 - r0)
 
 piWedges :: Model -> Svg ()
-piWedges m = let piRngs   = fst $ piAndOrphanRanges m :: Map T.Text AngleRange
+piWedges m = let piRngs   = piRanges m :: Map T.Text AngleRange
                  piMemberAngs = allPiMemberAngles m
                  piInfo = Map.intersectionWith (\a b -> (a,b)) piRngs piMemberAngs
              in mconcat . Map.elems $ Map.mapWithKey piWedge piInfo
 
 thrustWedge :: (Thrust, AngleRange) -> Svg ()
-thrustWedge (Thrust tName, (th0, th1)) = do
+thrustWedge (Thrust{..}, (th0, th1)) = do
   (with $ taurusWedge (TaurusWedgeSpec 0 0 r0 r1 ang width) False)
     [fill_ "hsl(100,50%,75%)", stroke_ "node"]
-  textOnCircle tName [font_size_ "18"] (r0/2 + r1/2) ang Nothing
+  textOnCircle _thrustName [font_size_ "18"] (r0/2 + r1/2) ang Nothing
     where width = angleDiff (th0,th1)
           r0    = thrustRadiusMin figOpts
           r1    = thrustRadiusMax figOpts
@@ -163,7 +148,7 @@ thrustWedge (Thrust tName, (th0, th1)) = do
 
 thrustWedges :: Model -> Svg ()
 thrustWedges Model{..} =
-  let angMap = thrustAngleRanges thrusts
+  let angMap = thrustAngleRanges _modelThrusts
   in  forM_  (Map.toList angMap) thrustWedge
 
 memberDot :: (T.Text, Double) -> Svg ()
@@ -171,7 +156,6 @@ memberDot (mName, mAng) =
   let x = collabRadius figOpts * cos mAng
       y = collabRadius figOpts * sin mAng
   in do
-    --with (text_ (toHtml mName)) [x_ (f x), y_ (f y)]
     circle_ [ cx_ (f x)
             , cy_ (f y)
             , r_ "10", fill_ (piColor figOpts)]
@@ -182,17 +166,17 @@ memberDots m = mconcat . map memberDot . Map.toList . memberAngles $ m
 collabLines :: Model -> Svg ()
 collabLines m@Model{..} =
   let angs = memberAngles m
-  in forM_ projects (projectLine angs)
+  in forM_ _modelProjects (projectLine angs)
 
 projectLine :: Map T.Text Double -> Project -> Svg ()
 projectLine angMap p@Project{..} =
   let thisAngs       = catMaybes $
-                       map (flip Map.lookup angMap) projectMembers
+                       map (flip Map.lookup angMap) (map _memberName _projectMembers)
       visLineAttrs   = [fill_ "none", stroke_ "yellow"
                        , stroke_width_ "2"]
       hidLineAttrs   = [fill_ "none", stroke_ "rgba(0,0,0,0)"
                        , stroke_width_ "5"]
-      lineGroupAttrs = [id_ (textEncode projectName)
+      lineGroupAttrs = [id_ (textEncode _projectName)
                        ,class_ "collabLine"]
       lineBase a0 a1 = highLine a0 a1 (piRadiusMin figOpts) 100
       collabLine a0 a1 = with (term "g")  lineGroupAttrs $ do

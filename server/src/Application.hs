@@ -8,6 +8,7 @@ module Application where
 
 ------------------------------------------------------------------------------
 import Control.Lens
+import Control.Exception (finally)
 import Control.Monad.Reader
 import Control.Monad.State
 import Snap.Snaplet
