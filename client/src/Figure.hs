@@ -187,7 +187,9 @@ projectLine angMap p@Project{..} =
 --        , stroke_width_ "2px"
 --        , id_ (textEncode (projectName))
 --        , class_ "collabLine"]
-  in mconcat [collabLine a0 a1 | a0 <- thisAngs , a1 <- thisAngs , a1 > a0]
+  in mconcat [collabLine a0 a1 | a0 <- thisAngs
+                               , a1 <- thisAngs
+                               , a1 > a0]
 
 
 ------------------------------------------------------------------------------

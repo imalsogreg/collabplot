@@ -15,7 +15,10 @@ import GHC.Generics
 data Model = Model {
     _modelThrusts :: [Thrust]
   , _modelProjects :: [Project]
-  }
+  } deriving (Generic)
+
+instance A.FromJSON Model where
+instance A.ToJSON   Model where
 
 data Thrust = Thrust {
     _thrustID :: UUID

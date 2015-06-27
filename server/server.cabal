@@ -20,7 +20,7 @@ Flag old-base
 
 Executable server
   hs-source-dirs: src
-  other-modules: CollabTypes, CollabHandlers
+  other-modules: CollabHandlers
   main-is: Main.hs
 
   Build-depends:

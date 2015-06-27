@@ -24,6 +24,7 @@ executable client
                        bytestring,
                        base64-bytestring,
                        containers,
+                       data-default,
                        data-hash,
                        HTTP,
                        cassava   >= 0.4 && < 0.5,
