@@ -13,6 +13,7 @@ import Data.Maybe
 import qualified Data.Text as T
 
 ------------------------------------------------------------------------------
+  {-
 data Model = Model {
   thrusts    :: [Thrust]
   , pis      :: [PI]
@@ -101,3 +102,4 @@ instance FromJSON Project where
     <*> v .: "memberNames"
     <*> v .:? "githubUrl"
   parseJSON _ = mzero
+-}
