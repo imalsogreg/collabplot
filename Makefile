@@ -1,12 +1,13 @@
+LIB=$(wildcard collabplot/src/*.hs)
 SERVER=server/dist/build/server/server
 CLIENT=server/static/all.js
+CLIENT_SRC=$(wildcard client/src/*.hs)
 
-all: $SERVER $CLIENT
+all: $(LIB) $(SERVER) $(CLIENT)
 
-$SERVER: server/server.cabal server/src/*.hs
-	cabal build
+$(SERVER): $(LIB) server/server.cabal server/src/*.hs
+	(cd server && cabal build)
 
-$CLIENT: client/collabplot.cabal client/*.hs
-	cabal configure client --ghcjs
-  cabal build client
-	cp client/dist/build/collabplot/collabplot.jsexe/*.js sever/static/
+$(CLIENT): $(LIB) client/client.cabal $(CLIENT_SRC)
+	(cd client && cabal configure --ghcjs && cabal build)
+	cp client/dist/build/client/client.jsexe/*.js server/static/

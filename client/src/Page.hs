@@ -17,25 +17,25 @@ import qualified Data.Text.Encoding as T
 import qualified Data.Text.Lazy as TL
 import Lucid
 import qualified Lucid as L
+import qualified Lucid.Svg as LSvg
 import Lucid.Svg (Svg(..), renderText)
 import CollabTypes
 import Utils
 import Network.HTTP.Base (urlEncode, urlDecode)
 import Figure
 import Reflex
+import Menus
 import Reflex.Dom
 
 pageWidget :: (MonadWidget t m) => m ()
 pageWidget = do
 
   pb <- getPostBuild
-  let  modelUrls = "localhost:8000/thrusts" <$ pb
-
-  --let getDataReq = xhrRequest "GET" "localhost:8000/thrusts" def -- TODO, also get projects
-  --dataEvents  <- performEventAsync getDataReq (leftmost [pb])
-  --modelEvents <- fmapMaybe (A.decode) dataEvents
+  let  modelUrls = "/model" <$ pb
   modelEvents <- fmapMaybe id <$> getAndDecode modelUrls
   model       <- holdDyn (Model [] []) modelEvents
+
+  newPIBox =<< mapDyn _modelThrusts model
 
   -- menuEvents <- menusWidget pictureEvents
   --infoWidget menuEvents
@@ -46,9 +46,37 @@ pageWidget = do
   return ()
 
 svgDyn :: (MonadWidget t m) => Dynamic t (Svg ()) -> m ()
-svgDyn s = do
-  elDynHtml' "div" =<< mapDyn (TL.unpack . renderText) s
+svgDyn figDyn = do
+  svgDyn <- mapDyn (svg . (bkgnd <>)) figDyn
+  elDynHtml' "div" =<< mapDyn (TL.unpack . renderText) svgDyn
   return ()
+
+
+svgHeight, svgWidth :: Double
+svgHeight = 800
+svgWidth  = 800
+
+bkgnd :: LSvg.Svg ()
+bkgnd = do
+  LSvg.defs_ $ do
+    LSvg.radialGradient_ [LSvg.id_ "bkgndGradient"
+                         , LSvg.cx_ "0.6"
+                         , LSvg.cy_ "0.6"
+                         , LSvg.r_  "0.4"] $ do
+      LSvg.stop_ [LSvg.offset_ "0%", LSvg.stop_color_ "#1b5354"]
+      LSvg.stop_ [LSvg.offset_ "100%", LSvg.stop_color_ "#0f2d2d"]
+  LSvg.rect_ [LSvg.x_ (f (svgWidth/(-2))), LSvg.y_ (f (svgHeight/(-2)))
+             , LSvg.width_ (f svgWidth), LSvg.height_ (f svgHeight)
+             , LSvg.fill_ "url(#bkgndGradient)"]
+
+svg :: LSvg.Svg () -> LSvg.Svg ()
+svg content = do
+  LSvg.doctype_
+  LSvg.with (LSvg.svg11_ (gTranslate 400 400 content))
+    [LSvg.version_ "1.1", LSvg.width_ "800", LSvg.height_ "800"]
+
+
+
 
 
 -- ------------------------------------------------------------------------------

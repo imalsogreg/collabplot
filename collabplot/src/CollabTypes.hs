@@ -15,7 +15,7 @@ import GHC.Generics
 data Model = Model {
     _modelThrusts :: [Thrust]
   , _modelProjects :: [Project]
-  } deriving (Generic)
+  } deriving (Eq, Show, Generic)
 
 instance A.FromJSON Model where
 instance A.ToJSON   Model where
@@ -29,6 +29,14 @@ data Thrust = Thrust {
 instance A.FromJSON Thrust where
 instance A.ToJSON Thrust where
 
+data InsThrust = InsThrust {
+  thrustName :: T.Text
+  } deriving (Eq, Ord, Show, Generic)
+
+instance FromJSON InsThrust where
+instance ToJSON   InsThrust where
+
+
 data PI = PI {
     _piID :: UUID
   , _piName :: T.Text
@@ -40,6 +48,16 @@ data PI = PI {
 instance A.FromJSON PI where
 instance A.ToJSON   PI where
 
+data InsPI = InsPI {
+    piName :: T.Text
+  , piThrust :: UUID.UUID
+  , piSite :: Maybe T.Text
+  } deriving (Eq, Ord, Show, Generic)
+
+instance A.ToJSON InsPI where
+instance A.FromJSON InsPI where
+
+
 data Member = Member {
     _memberID :: UUID
   , _memberName :: T.Text
@@ -49,6 +67,16 @@ data Member = Member {
 
 instance A.FromJSON Member where
 instance A.ToJSON   Member where
+
+data InsMember = InsMember {
+  memberName :: T.Text
+  , memberPI :: UUID.UUID
+  , memberSite :: Maybe T.Text
+  } deriving (Eq, Ord, Show, Generic)
+
+instance FromJSON InsMember where
+instance ToJSON   InsMember where
+
 
 
 data Project = Project {
@@ -60,6 +88,15 @@ data Project = Project {
 
 instance A.FromJSON Project where
 instance A.ToJSON   Project where
+
+data InsProject = InsProject {
+  projectName :: T.Text
+  , projectSite :: Maybe T.Text
+  } deriving (Eq, Ord, Show, Generic)
+
+instance FromJSON InsProject where
+instance ToJSON   InsProject where
+
 
 instance A.FromJSON UUID where
   parseJSON (A.String t) = case UUID.fromString (T.unpack t) of

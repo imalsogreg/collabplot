@@ -34,3 +34,7 @@ CREATE TABLE projectmember (
   member uuid REFERENCES member(id),
   project uuid REFERENCES project(id)
 );
+
+CREATE TABLE mods (
+  userLogin varchar(200)
+);

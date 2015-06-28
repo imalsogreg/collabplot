@@ -70,6 +70,7 @@ routes = [ ("/login",    with auth handleLoginSubmit)
          , ("/logout",   with auth handleLogout)
          , ("/new_user", with auth handleNewUser)
 
+         , ("/model", with auth handleModel)
          , ("/thrusts", with auth handleThrusts)
          , ("/thrust/:id",  with auth handleThrust)
          , ("/projects", with auth handleProjects)

@@ -5,7 +5,6 @@
 module CollabHandlers where
 
 import Control.Applicative
-import Control.Error
 import Snap.Core
 import Snap.Snaplet
 import Snap.Extras.CoreUtils
@@ -15,6 +14,7 @@ import Snap.Snaplet.PostgresqlSimple
 import Control.Monad (when)
 import qualified Data.Aeson as A
 import           Data.Aeson
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.UUID as UUID
@@ -27,8 +27,14 @@ import CollabTypes
 requireMod :: Handler App (AuthManager App) ()
 requireMod = do
   u <- currentUser
-  mods <- withTop db $ query_ "SELECT * FROM mod;"
+  mods <- withTop db $ query_ "SELECT * FROM mods;"
   when (Only (maybe "" userLogin u) `notElem` mods) (badReq "Access denied")
+
+getModel :: Handler App (AuthManager App) Model
+getModel = do
+  thrusts  <- getThrusts
+  projects <- pure []
+  return $ Model thrusts projects
 
 getThrusts :: Handler App (AuthManager App) [Thrust]
 getThrusts = do
@@ -59,6 +65,10 @@ handleThrusts = method GET (getThrusts >>= writeJSON)
           [Only i] <- withTop db $ query "INSERT INTO thrust(name) VALUES (?)" (Only thrustName)
           writeBS (UUID.toASCIIBytes i)
 
+handleModel :: Handler App (AuthManager App) ()
+handleModel = do
+  getModel >>= writeJSON
+
 handleThrust :: Handler App (AuthManager App) ()
 handleThrust = do
   idBytes <- reqParam "id"
@@ -72,13 +82,6 @@ handleThrust = do
           [Only r] <- withTop db $ query "UPDATE thrust WITH name=(?) WHERE id=(?);"
                       (nm, i)
           writeBS (UUID.toASCIIBytes r)
-
-data InsThrust = InsThrust {
-  thrustName :: T.Text
-  } deriving (Generic)
-
-instance FromJSON InsThrust where
-instance ToJSON   InsThrust where
 
 handleProjects :: Handler App (AuthManager App) ()
 handleProjects = method GET (getProjects >>= writeJSON)
@@ -102,14 +105,6 @@ handleProject = do
           [Only r] <- withTop db $ query "UPDATE project WITH name=(?), site=(?) WHERE id=(?);"
                       (projectName, projectSite, i)
           writeBS (UUID.toASCIIBytes r)
-
-data InsProject = InsProject {
-  projectName :: T.Text
-  , projectSite :: Maybe T.Text
-  } deriving (Generic)
-
-instance FromJSON InsProject where
-instance ToJSON   InsProject where
 
 handleMembers :: Handler App (AuthManager App) ()
 handleMembers = method GET (getMembers >>= writeJSON)
@@ -136,15 +131,6 @@ handleMember = do
                       (nm, mPi, ws, i)
           writeBS (UUID.toASCIIBytes r)
 
-data InsMember = InsMember {
-  memberName :: T.Text
-  , memberPI :: UUID.UUID
-  , memberSite :: Maybe T.Text
-  } deriving (Generic)
-
-instance FromJSON InsMember where
-instance ToJSON   InsMember where
-
 
 handlePIs :: Handler App (AuthManager App) ()
 handlePIs = method GET (getPIs >>= writeJSON)
@@ -155,7 +141,15 @@ handlePIs = method GET (getPIs >>= writeJSON)
                       "INSERT INTO pi(name,thrust,website) VALUES (?,?,?) returning id;"
                       (nm,(th :: UUID.UUID),ws)
           writeBS (UUID.toASCIIBytes i)
+          --writeText (T.pack $ show v)
 
+-- handlePIs :: Handler App (AuthManager App) ()
+-- handlePIs = method GET (getPIs >>= writeJSON)
+--             <|> method POST (requireMod >> debugit)
+--   where 
+--         debugit = do
+--           (A.Object obj) <- reqJSON
+--           writeBS (BL.toStrict . A.encode $ obj)
 
 handlePI :: Handler App (AuthManager App) ()
 handlePI = do
@@ -173,15 +167,6 @@ handlePI = do
           "UPDATE pi SET name=(?), thrust=(?), site=(?) WHERE id=(?);"
           (_piName, _piThrust, _piSite, (i :: UUID.UUID))
         writeBS (UUID.toASCIIBytes r)
-
-data InsPI = InsPI {
-    piName :: T.Text
-  , piThrust :: UUID.UUID
-  , piSite :: Maybe T.Text
-  } deriving (Generic)
-
-instance A.ToJSON InsPI where
-instance A.FromJSON InsPI where
 
 instance ToRow PI where
   toRow PI{..} = toRow (_piID, _piName, _piThrust, _piSite)
