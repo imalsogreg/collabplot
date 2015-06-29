@@ -63,7 +63,7 @@ handleThrusts = method GET (getThrusts >>= writeJSON)
   where postThrust = do
           InsThrust{..} <- reqJSON
           [Only i] <- withTop db $ query "INSERT INTO thrust(name) VALUES (?)" (Only thrustName)
-          writeBS (UUID.toASCIIBytes i)
+          writeJSON (Thrust i thrustName [])
 
 handleModel :: Handler App (AuthManager App) ()
 handleModel = do
@@ -78,19 +78,19 @@ handleThrust = do
           withTop db $ execute "DELETE FROM thrust WHERE id=(?)" (Only i)
           writeBS "Ok"
         putThrust i = do
-          (InsThrust nm) <- reqJSON
+          (Thrust i nm pis) <- reqJSON
           [Only r] <- withTop db $ query "UPDATE thrust WITH name=(?) WHERE id=(?);"
                       (nm, i)
-          writeBS (UUID.toASCIIBytes r)
+          writeJSON (Thrust r nm pis)
 
 handleProjects :: Handler App (AuthManager App) ()
 handleProjects = method GET (getProjects >>= writeJSON)
                  <|> method POST (requireMod >> postProject)
   where postProject = do
           (InsProject nm ws) <- reqJSON
-          [Only i] <- withTop db $ query "INSERT INTO project(name,website);"
+          [Only r] <- withTop db $ query "INSERT INTO project(name,website);"
                       (nm, ws)
-          writeBS (UUID.toASCIIBytes i)
+          writeJSON (Project r nm ws [])
 
 handleProject :: Handler App (AuthManager App) ()
 handleProject = do
@@ -101,10 +101,10 @@ handleProject = do
           withTop db $ execute "DELETE FROM project WHERE id=(?);" (Only i)
           writeBS "Ok."
         putProject i = do
-          InsProject{..} <- reqJSON
+          Project{..} <- reqJSON
           [Only r] <- withTop db $ query "UPDATE project WITH name=(?), site=(?) WHERE id=(?);"
-                      (projectName, projectSite, i)
-          writeBS (UUID.toASCIIBytes r)
+                      (_projectName, _projectSite, i)
+          writeJSON (Project r _projectName _projectSite _projectMembers)
 
 handleMembers :: Handler App (AuthManager App) ()
 handleMembers = method GET (getMembers >>= writeJSON)
@@ -113,7 +113,7 @@ handleMembers = method GET (getMembers >>= writeJSON)
           (InsMember mn mPI ws) <- reqJSON
           [Only i] <- withTop db $ query "INSERT INTO member(name,pi,website) returning id;"
                       (mn, mPI, ws)
-          writeBS (UUID.toASCIIBytes i)
+          writeJSON (Member i mn mPI ws)
 
 handleMember :: Handler App (AuthManager App) ()
 handleMember = do
@@ -129,7 +129,7 @@ handleMember = do
           [Only r] <- withTop db $ query
                       "UPDATE member SET name=(?),pi=(?),website=(?) WHERE id=(?)"
                       (nm, mPi, ws, i)
-          writeBS (UUID.toASCIIBytes r)
+          writeJSON (Member r nm mPi ws)
 
 
 handlePIs :: Handler App (AuthManager App) ()
@@ -140,16 +140,8 @@ handlePIs = method GET (getPIs >>= writeJSON)
           [Only i] <- withTop db $ query
                       "INSERT INTO pi(name,thrust,website) VALUES (?,?,?) returning id;"
                       (nm,(th :: UUID.UUID),ws)
-          writeBS (UUID.toASCIIBytes i)
-          --writeText (T.pack $ show v)
+          writeJSON (PI i nm th ws [])
 
--- handlePIs :: Handler App (AuthManager App) ()
--- handlePIs = method GET (getPIs >>= writeJSON)
---             <|> method POST (requireMod >> debugit)
---   where 
---         debugit = do
---           (A.Object obj) <- reqJSON
---           writeBS (BL.toStrict . A.encode $ obj)
 
 handlePI :: Handler App (AuthManager App) ()
 handlePI = do
@@ -166,7 +158,7 @@ handlePI = do
         [Only r] <- withTop db $ query
           "UPDATE pi SET name=(?), thrust=(?), site=(?) WHERE id=(?);"
           (_piName, _piThrust, _piSite, (i :: UUID.UUID))
-        writeBS (UUID.toASCIIBytes r)
+        writeJSON (PI r _piName _piThrust _piSite _piMembers)
 
 instance ToRow PI where
   toRow PI{..} = toRow (_piID, _piName, _piThrust, _piSite)

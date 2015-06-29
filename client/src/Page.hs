@@ -2,6 +2,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecursiveDo       #-}
+{-# LANGUAGE RankNTypes        #-}
 
 module Page where
 
@@ -27,15 +29,16 @@ import Reflex
 import Menus
 import Reflex.Dom
 
-pageWidget :: (MonadWidget t m) => m ()
-pageWidget = do
+pageWidget :: forall t m.(MonadWidget t m) => m ()
+pageWidget = mdo
 
   pb <- getPostBuild
-  let  modelUrls = "/model" <$ pb
+  let  modelUrls = "/model" <$ (leftmost [pb
+                                         , () <$ piUpdates])
   modelEvents <- fmapMaybe id <$> getAndDecode modelUrls
   model       <- holdDyn (Model [] []) modelEvents
 
-  newPIBox =<< mapDyn _modelThrusts model
+  piUpdates <- newPIBox model
 
   -- menuEvents <- menusWidget pictureEvents
   --infoWidget menuEvents
