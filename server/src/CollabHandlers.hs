@@ -88,8 +88,9 @@ handleProjects = method GET (getProjects >>= writeJSON)
                  <|> method POST (requireMod >> postProject)
   where postProject = do
           (InsProject nm ws) <- reqJSON
-          [Only r] <- withTop db $ query "INSERT INTO project(name,website);"
-                      (nm, ws)
+          [Only r] <- withTop db $
+            query "INSERT INTO project(name,website) VALUES (?,?) returning id;"
+            (nm, ws)
           writeJSON (Project r nm ws [])
 
 handleProject :: Handler App (AuthManager App) ()
@@ -111,7 +112,8 @@ handleMembers = method GET (getMembers >>= writeJSON)
                 <|> method POST (requireMod >> insertMember)
   where insertMember = do
           (InsMember mn mPI ws) <- reqJSON
-          [Only i] <- withTop db $ query "INSERT INTO member(name,pi,website) returning id;"
+          [Only i] <- withTop db $ query
+                      "INSERT INTO member(name,pi,website) VALUES (?,?,?) returning id;"
                       (mn, mPI, ws)
           writeJSON (Member i mn mPI ws)
 

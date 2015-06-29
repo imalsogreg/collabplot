@@ -34,12 +34,18 @@ pageWidget = mdo
 
   pb <- getPostBuild
   let  modelUrls = "/model" <$ (leftmost [pb
-                                         , () <$ piUpdates])
+                                         , () <$ piUpdates
+                                         , () <$ memberUpdates
+                                         , () <$ projectUpdates
+                                         ])
   modelEvents <- fmapMaybe id <$> getAndDecode modelUrls
   model       <- holdDyn (Model [] []) modelEvents
 
   piUpdates <- newPIBox model
-
+  el "br" (return ())
+  memberUpdates <- newMemberBox model
+  el "br"  (return ())
+  projectUpdates <- newProjectBox model
   -- menuEvents <- menusWidget pictureEvents
   --infoWidget menuEvents
 

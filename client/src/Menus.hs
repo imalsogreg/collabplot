@@ -39,6 +39,30 @@ newPIBox dModel =
                       listToMaybe (filter pred (_modelThrusts m))
             in (\i -> InsPI (T.pack piNm) i Nothing) <$> mID
 
+newMemberBox :: (MonadWidget t m) => Dynamic t Model -> m (Event t Member)
+newMemberBox dModel =
+  newEntityBox dModel ["Name","PI"] memberValidate "/members"
+  where
+    memberValidate :: Model -> MField -> Maybe InsMember
+    memberValidate m (MField str) = case lines str of
+          [memNm, piNm] ->
+            let l = map toLower
+                allPIs = concatMap _thrustPIs (_modelThrusts m)
+                pred = (== l piNm) . l . T.unpack . _piName
+                mID = _piID <$>
+                      listToMaybe (filter pred allPIs)
+            in (\i -> InsMember (T.pack memNm) i Nothing) <$> mID
+
+newProjectBox :: (MonadWidget t m) => Dynamic t Model -> m (Event t Project)
+newProjectBox dModel =
+  newEntityBox dModel ["Name"] projValidate "/projects"
+  where
+    projValidate :: Model -> MField -> Maybe InsProject
+    projValidate m (MField str) = case lines str of
+      [nm] -> case null nm of
+        True  -> Nothing
+        False -> Just $ InsProject (T.pack nm) Nothing
+
 newEntityBox
   :: forall m t a b.(MonadWidget t m, A.ToJSON a, A.FromJSON b, Show b)
      => Dynamic t Model
@@ -76,68 +100,5 @@ newEntityBox dynModel fieldLabels validation route = mdo
   let postEvents = fmapMaybe id $ tagDyn dynPost enterAttempts
 
   r <- performRequestAsync postEvents
-
+  display =<< holdDyn (Just "unused") (fmap (_xhrResponse_body) r)
   return $ fmapMaybe decodeXhrResponse r
-
-newPIBox' :: (MonadWidget t m) => Dynamic t [Thrust] -> m (Event t ())
-newPIBox' dThrusts = mdo
-
-  piInput <- text "Name:"   *>
-             textInput (def { _textInputConfig_attributes = dynAttrs})
-  thInput <- text "Thrust:" *>
-             textInput (def { _textInputConfig_attributes = dynAttrs})
-  thrustID <- combineDyn lookupID (_textInput_value thInput) dThrusts
-
-  okToPost <- combineDyn bothOk (_textInput_value piInput) thrustID
-  lastCode <- holdDyn 0 (_textInput_keydown thInput)
-  dynAttrs <- forDyn okToPost $ bool
-              ("style" =: "background-color:hsl(1,50%,85%);")
-              ("style" =: "background-color:hsl(100,50%,85%);")
-
-
-  dynPost <- combineDyn toPost (_textInput_value piInput) =<<
-             combineDyn (,) (_textInput_value thInput) dThrusts
-
-  postEvents <- return $ tagDyn dynPost . ffilter id . tagDyn okToPost $
-                leftmost [textInputGetEnter piInput ,textInputGetEnter thInput]
-
-  r <- performRequestAsync (fforMaybe postEvents id) --postEvents
-
-  display thrustID
-  text " :: "
-  display lastCode
-  text " :: "
-  display okToPost
-  display =<< holdDyn Nothing (_xhrResponse_body <$> r)
-
-  return (() <$ r)
-
-
-lookupID :: String -> [Thrust] -> Maybe UUID.UUID
-lookupID tName thrusts =
-  let matches s th = map toLower s == map toLower (T.unpack . _thrustName $ th)
-  in  _thrustID <$> listToMaybe (filter (matches tName) thrusts)
-
-bothOk :: String -> Maybe UUID.UUID -> Bool
-bothOk nm mayID = not (null nm || mayID == Nothing)
-
-toPost :: String -> (String, [Thrust]) -> Maybe XhrRequest
-toPost nm (thString, thrusts) = case lookupID thString thrusts of
-  Nothing  -> Nothing
-  Just pID -> case null nm of
-    True  -> Nothing
-    False -> let newPI = InsPI (T.pack nm) pID Nothing
-                 payload = BL.unpack . A.encode $ newPI
-             in Just $ xhrRequest "POST" "/pis"
-                (def { _xhrRequestConfig_sendData = Just payload
-                     , _xhrRequestConfig_headers = "Content-Type" =: "application/json"})
-
-{-
-          toReq nm (Just tID) = let newPI = InsPI (T.pack nm) tID Nothing
-                                in xhrRequest "POST" "/pis"
-                                   (def {_xhrRequestConfig_sendData = Just . show . A.encode $ newPI})
-          toReq _  Nothing    = xhrRequest "POST" "/pis" def
--}
---crudTableWidget
---  :: (MonadWidget t m)
---  => 
