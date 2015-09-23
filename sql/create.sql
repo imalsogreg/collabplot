@@ -31,8 +31,8 @@ CREATE TABLE project (
 );
 
 CREATE TABLE projectmember (
-  member uuid REFERENCES member(id),
-  project uuid REFERENCES project(id)
+  member uuid NOT NULL REFERENCES member(id),
+  project uuid NOT NULL REFERENCES project(id)
 );
 
 CREATE TABLE mods (

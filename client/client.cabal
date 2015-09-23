@@ -17,7 +17,7 @@ cabal-version:       >=1.10
 
 executable client
   main-is:             Main.hs
-  other-modules:       Shadow, Primitives, Utils, Model, Figure, Page, Menus
+  other-modules:       Shadow, Primitives, Utils, Figure, Page, Menus
   -- other-extensions:
   build-depends:       base      >= 4.8 && < 4.9,
                        aeson     >= 0.8 && < 0.10,
@@ -33,6 +33,7 @@ executable client
                        lucid-svg >= 0.4 && < 0.5,
                        reflex,
                        reflex-dom,
+                       reflex-dom-contrib,
                        text,
                        transformers,
                        unordered-containers,

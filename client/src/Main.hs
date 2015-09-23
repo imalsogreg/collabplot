@@ -22,7 +22,6 @@ import GHCJS.DOM.Element
 import GHCJS.DOM.HTMLElement
 import Reflex.Dom
 
-import           Model
 import           Page
 import           Primitives
 import           Shadow

@@ -33,8 +33,16 @@ requireMod = do
 getModel :: Handler App (AuthManager App) Model
 getModel = do
   thrusts  <- getThrusts
-  projects <- pure []
-  return $ Model thrusts projects
+  projects <- getProjects
+  projmems <- withTop db $ query_ "SELECT * FROM projectmember"
+  let members   = concatMap _piMembers (concatMap _thrustPIs thrusts) :: [Member]
+      memsOfProj :: Project -> [Member]
+      memsOfProj p = let mIDs = map fst . filter (\pm -> _projectID p == snd pm)
+                                $ projmems
+                     in  filter (\m -> _memberID m `elem` mIDs) members
+      projects' :: [Project]
+      projects' = map (\p -> p {_projectMembers = memsOfProj p}) projects
+  return $ Model thrusts projects'
 
 getThrusts :: Handler App (AuthManager App) [Thrust]
 getThrusts = do
@@ -188,4 +196,3 @@ instance ToRow Thrust where
 
 instance FromRow Thrust where
   fromRow = Thrust <$> field <*> field <*> pure []
-

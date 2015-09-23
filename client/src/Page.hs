@@ -26,6 +26,7 @@ import Utils
 import Network.HTTP.Base (urlEncode, urlDecode)
 import Figure
 import Reflex
+import Primitives
 import Shadow
 import Menus
 import Reflex.Dom
@@ -51,13 +52,35 @@ pageWidget = mdo
   -- menuEvents <- menusWidget pictureEvents
   -- infoWidget menuEvents
 
-  elClass "div" "main-figure" $ do
+  (fig,_) <- elAttr' "div" ("class" =: "main-figure") $ do
     --svgDyn =<< (mapDyn modelSvg model)
     --pictureEvents <- pictureWidget menuEvents
-    svgTag $ do
+    tws <- taurusInput
+    svgTag (floor svgWidth) (floor svgHeight) $ do
       bkgnd'
-      cicr <- elShadow' defShadowParams $ svgElAttr "circle" ("cx" =: "10" <> "cy" =: "10" <> "r" =: "50") $ return ()
+      -- cicr <- elShadow' defShadowParams $ svgElAttr "circle" ("cx" =: "10" <> "cy" =: "10" <> "r" =: "50") $ return ()
+      --taurusWedge' (constDyn (TaurusWedgeSpec 50 50 20 10 0 1)) False (constDyn ("fill" =: "red"))
+      elShadow' defShadowParams $ taurusWedge' tws' False (constDyn ("fill" =: "red"))
+      elShadow' defShadowParams $ taurusWedge' tws'' False (constDyn ("fill" =: "red"))
+      elShadow' defShadowParams $ taurusWedge' tws''' False (constDyn ("fill" =: "red"))
       return ()
+    display model
+
+  let mEvents = domEvent Mousemove fig
+  evt <- holdDyn (0,0) mEvents
+  tws' <- forDyn evt $ \(x,y) ->
+    TaurusWedgeSpec 200 200 20 50
+      (fromIntegral x * 2 * pi / 400)
+      (fromIntegral y * 2 * pi / 400)
+  tws'' <- forDyn evt $ \(x,y) ->
+    TaurusWedgeSpec 200 200 60 90
+      (fromIntegral x * 2 * pi / 200)
+      (fromIntegral y * 2 * pi / 100)
+  tws''' <- forDyn evt $ \(x,y) ->
+    TaurusWedgeSpec 200 200 100 140
+      (fromIntegral x * 2 * pi / 400)
+      (fromIntegral y * 2 * pi / 200)
+
   return ()
 
 -- LUCID

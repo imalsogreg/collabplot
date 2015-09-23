@@ -79,6 +79,7 @@ routes = [ ("/login",    with auth handleLoginSubmit)
          , ("/member/:id", with auth handleMember)
          , ("/pis",      with auth handlePIs)
          , ("/pi/:id", with auth handlePI)
+         , ("/collabplot", render "_collabplot")
          , ("",          serveDirectory "static")
          ]
 

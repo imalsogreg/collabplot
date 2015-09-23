@@ -3,3 +3,4 @@ Setup.hs
 cabal.sandbox.config
 dist/
 *~
+server/snaplets/postgresql-simple/devel.cfg

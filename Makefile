@@ -10,4 +10,4 @@ $(SERVER): $(LIB) server/server.cabal server/src/*.hs
 
 $(CLIENT): $(LIB) client/client.cabal $(CLIENT_SRC)
 	(cd client && cabal configure --ghcjs && cabal build)
-	cp client/dist/build/client/client.jsexe/*.js server/static/
+	cp client/dist/build/client/client.jsexe/*.js server/static/js/

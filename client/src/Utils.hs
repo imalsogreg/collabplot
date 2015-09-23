@@ -49,6 +49,9 @@ st = id
 fs :: Int -> String
 fs = show
 
+fls :: Double -> String
+fls = show . round
+
 px :: Int -> String
 px = (<> "px") . show
 
@@ -58,13 +61,15 @@ pxf = px . floor
 svgNS :: String
 svgNS = "http://www.w3.org/2000/svg"
 
-svgTag :: (MonadWidget t m) => m a -> m a
-svgTag child =
+svgTag :: (MonadWidget t m) => Int -> Int -> m a -> m a
+svgTag width height child =
   elC
-  (defElConfig {_elConfig_namespace= Just svgNS})
+  (defElConfig {_elConfig_namespace= Just svgNS
+               ,_elConfig_attrs    = st "width" =: show width
+                                     <> "height" =: show height
+               })
   "svg" child
 
---svg :: (MonadWidget t m, Attributes m attrs) => ElConfig attrs -> ElConfig attrs
 mkSvg :: ElConfig a -> ElConfig a
 mkSvg e = e {_elConfig_namespace = Just svgNS}
 

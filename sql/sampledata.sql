@@ -34,8 +34,8 @@ INSERT INTO project(name,website) VALUES
 
 INSERT INTO projectmember(member,project) VALUES
 ((SELECT id FROM member WHERE name='Hector Penagos'),
-(SELECT id from project WHERE name='Topology  of hippocampal representations')),
+(SELECT id from project WHERE name='Topology of hippocampal representations')),
 ((SELECT id FROM member WHERE name='Samuel Gershman'),
-(SELECT id from project WHERE name='Topology  of hippocampal representations'));
+(SELECT id from project WHERE name='Topology of hippocampal representations'));
 
 INSERT INTO mods(userLogin) VALUES ('imalsogreg');
