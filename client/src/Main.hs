@@ -29,18 +29,7 @@ import           Shadow
 import           Utils
 import           Menus
 
-
--- ------------------------------------------------------------------------------
--- main :: IO ()
--- main = do
---   b      <- BSL.readFile "collabdata/model.json"
---   jqPath <- JQuery.file
---   case A.decode b of
---     Nothing -> error "Json decode error"
---     Just m  -> do
---       L.renderToFile "collaborations.html" $
---         page jqPath m (svg (bkgnd <> modelSvg m))
-
+------------------------------------------------------------------------------
 main :: IO ()
 main = do
   runWebGUI $ \webView -> do

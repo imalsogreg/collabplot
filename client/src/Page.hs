@@ -26,10 +26,11 @@ import Utils
 import Network.HTTP.Base (urlEncode, urlDecode)
 import Figure
 import Reflex
+import Shadow
 import Menus
 import Reflex.Dom
 
-pageWidget :: forall t m.(MonadWidget t m) => m ()
+pageWidget :: MonadWidget t m => m ()
 pageWidget = mdo
 
   pb <- getPostBuild
@@ -46,14 +47,20 @@ pageWidget = mdo
   memberUpdates <- newMemberBox model
   el "br"  (return ())
   projectUpdates <- newProjectBox model
+
   -- menuEvents <- menusWidget pictureEvents
-  --infoWidget menuEvents
+  -- infoWidget menuEvents
 
   elClass "div" "main-figure" $ do
-    svgDyn =<< (mapDyn modelSvg model)
+    --svgDyn =<< (mapDyn modelSvg model)
     --pictureEvents <- pictureWidget menuEvents
+    svgTag $ do
+      bkgnd'
+      cicr <- elShadow' defShadowParams $ svgElAttr "circle" ("cx" =: "10" <> "cy" =: "10" <> "r" =: "50") $ return ()
+      return ()
   return ()
 
+-- LUCID
 svgDyn :: (MonadWidget t m) => Dynamic t (Svg ()) -> m ()
 svgDyn figDyn = do
   svgDyn <- mapDyn (svg . (bkgnd <>)) figDyn
@@ -77,6 +84,20 @@ bkgnd = do
   LSvg.rect_ [LSvg.x_ (f (svgWidth/(-2))), LSvg.y_ (f (svgHeight/(-2)))
              , LSvg.width_ (f svgWidth), LSvg.height_ (f svgHeight)
              , LSvg.fill_ "url(#bkgndGradient)"]
+
+bkgnd' :: MonadWidget t m => m ()
+bkgnd' = do
+  svgEl "defs" $ do
+    svgElAttr "radialGradient" ("id" =: st "bkgndGradient"
+                       <> "cx" =: "0.6" <> "cy" =: "0.6"
+                       <> "r" =: "0.4") $ do
+        svgElAttr "stop" ("offset" =: st "0%" <> "stop-color" =: "#1b5354") $ return ()
+        svgElAttr "stop" ("offset" =: st "100%" <> "stop-color" =: "#0f2d2d") $ return ()
+  svgElAttr "rect" ("x" =: pxf (svgWidth / (-2))
+                 <> "y" =: pxf (svgHeight / (-2))
+                 <> "width" =: pxf svgWidth
+                 <> "height" =: pxf svgHeight
+                 <> "fill" =: "url(#bkgndGradient)") $ return ()
 
 svg :: LSvg.Svg () -> LSvg.Svg ()
 svg content = do
@@ -105,4 +126,3 @@ svg content = do
 --           tr_ $ td_ [class_ "field"] "Project name:" <> td_ [class_ "val"] (toHtml $ projectName p)
 --           tr_ $ td_ [class_ "field"] "Members:"      <> td_ [class_ "val"] (foldMap toHtml $ projectMembers p)
 --     (termWith "script" [src_ (T.pack "collab.js")] (return ()))
-

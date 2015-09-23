@@ -78,6 +78,7 @@ routes = [ ("/login",    with auth handleLoginSubmit)
          , ("/members" , with auth handleMembers)
          , ("/member/:id", with auth handleMember)
          , ("/pis",      with auth handlePIs)
+         , ("/pi/:id", with auth handlePI)
          , ("",          serveDirectory "static")
          ]
 
@@ -99,4 +100,3 @@ app = makeSnaplet "app" "An snaplet example application." Nothing $ do
     addRoutes routes
     addAuthSplices h auth
     return $ App h s a d
-

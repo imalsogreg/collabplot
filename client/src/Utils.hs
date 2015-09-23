@@ -4,8 +4,11 @@ module Utils where
 
 import Data.Fixed (mod')
 import Data.Hash
+import Data.Map (Map)
+import Data.Monoid ((<>))
 import qualified Data.Text as T
 import           Lucid.Svg
+import           Reflex.Dom
 
 gTranslate :: Double -> Double -> Svg () -> Svg ()
 gTranslate dx dy content = with (g_ content) [transform_ transString]
@@ -39,3 +42,54 @@ angleDiff (th0, th1) = (th1 - th0) `mod'` (2*pi)
 textEncode :: T.Text -> T.Text
 textEncode = T.pack . show . asWord64 . hash . T.unpack
 
+
+st :: String -> String
+st = id
+
+fs :: Int -> String
+fs = show
+
+px :: Int -> String
+px = (<> "px") . show
+
+pxf :: Double -> String
+pxf = px . floor
+
+svgNS :: String
+svgNS = "http://www.w3.org/2000/svg"
+
+svgTag :: (MonadWidget t m) => m a -> m a
+svgTag child =
+  elC
+  (defElConfig {_elConfig_namespace= Just svgNS})
+  "svg" child
+
+--svg :: (MonadWidget t m, Attributes m attrs) => ElConfig attrs -> ElConfig attrs
+mkSvg :: ElConfig a -> ElConfig a
+mkSvg e = e {_elConfig_namespace = Just svgNS}
+
+svgEl :: MonadWidget t m => String -> m a -> m a
+svgEl nm child =
+  elC (defElConfig {_elConfig_namespace = Just svgNS}) nm $ child
+
+svgElAttr:: MonadWidget t m => String -> Map String String -> m a -> m a
+svgElAttr string ats child = do
+  (_,c) <- svgElAttr' string ats child
+  return c
+
+svgElAttr' :: (MonadWidget t m, Attributes m attrs) => String -> attrs -> m a -> m (El t, a)
+svgElAttr' string ats child = let cfg = defElConfig { _elConfig_namespace = Just svgNS
+                                                    , _elConfig_attrs     = ats
+                                                    }
+                               in elC' cfg string child
+
+svgElDynAttr' :: MonadWidget t m => String -> Dynamic t (Map String String) -> m a -> m (El t, a)
+svgElDynAttr' nm dynats child =
+  let cfg = defElConfig { _elConfig_namespace = Just svgNS
+                        , _elConfig_attrs     = dynats}
+  in elC' cfg nm child
+
+svgElDynAttr :: MonadWidget t m => String -> Dynamic t (Map String String) -> m a -> m a
+svgElDynAttr nm dynats child = do
+  (_,c) <- svgElDynAttr' nm dynats child
+  return c
