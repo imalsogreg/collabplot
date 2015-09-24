@@ -58,13 +58,15 @@ pageWidget = mdo
     tws <- taurusInput
     svgTag (floor svgWidth) (floor svgHeight) $ do
       bkgnd'
-      piWedges' model
-      thrustWedges' model
-      -- cicr <- elShadow' defShadowParams $ svgElAttr "circle" ("cx" =: "10" <> "cy" =: "10" <> "r" =: "50") $ return ()
-      --taurusWedge' (constDyn (TaurusWedgeSpec 50 50 20 10 0 1)) False (constDyn ("fill" =: "red"))
-      elShadow' defShadowParams $ taurusWedge' tws' False (constDyn ("fill" =: "red"))
-      elShadow' defShadowParams $ taurusWedge' tws'' False (constDyn ("fill" =: "red"))
-      elShadow' defShadowParams $ taurusWedge' tws''' False (constDyn ("fill" =: "red"))
+      svgElAttr "g" ("transform" =: "translate(200 200)") $ modelSvg' model
+      --
+      -- piWedges' model
+      -- thrustWedges' model
+      -- -- cicr <- elShadow' defShadowParams $ svgElAttr "circle" ("cx" =: "10" <> "cy" =: "10" <> "r" =: "50") $ return ()
+      -- --taurusWedge' (constDyn (TaurusWedgeSpec 50 50 20 10 0 1)) False (constDyn ("fill" =: "red"))
+      -- elShadow' defShadowParams $ taurusWedge' tws' False (constDyn ("fill" =: "red"))
+      -- elShadow' defShadowParams $ taurusWedge' tws'' False (constDyn ("fill" =: "red"))
+      -- elShadow' defShadowParams $ taurusWedge' tws''' False (constDyn ("fill" =: "red"))
       return ()
     display model
 
@@ -112,12 +114,16 @@ bkgnd = do
 
 bkgnd' :: MonadWidget t m => m ()
 bkgnd' = do
+
   svgEl "defs" $ do
     svgElAttr "radialGradient" ("id" =: st "bkgndGradient"
                        <> "cx" =: "0.6" <> "cy" =: "0.6"
                        <> "r" =: "0.4") $ do
-        svgElAttr "stop" ("offset" =: st "0%" <> "stop-color" =: "#1b5354") $ return ()
-        svgElAttr "stop" ("offset" =: st "100%" <> "stop-color" =: "#0f2d2d") $ return ()
+        svgElAttr "stop" ("offset" =: st "0%"
+                       <> "stop-color" =: "#1b5354") $ return ()
+        svgElAttr "stop" ("offset" =: st "100%"
+                       <> "stop-color" =: "#0f2d2d") $ return ()
+
   svgElAttr "rect" ("x" =: pxf (svgWidth / (-2))
                  <> "y" =: pxf (svgHeight / (-2))
                  <> "width" =: pxf svgWidth

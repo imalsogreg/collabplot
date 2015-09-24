@@ -203,17 +203,29 @@ highLine th0 th1 radius height = path_ [d_ d]
                       ]
 
 highLine' :: MonadWidget t m
-          -> Dynamic t (Double, Double)
+          => Dynamic t (Double, Double)
           -> Dynamic t Double
           -> Dynamic t Double
-          -> m ()
-highLine' dynRng dynRad dynHeight = do
-  t0 <- mapDyn fst dynRng
-  t1 <- mapDyn snd dynRng
-  x0 <- $(qDyn [| $(unqDyn [|dynRad|]) * (cos $(unqDyn [|t0|])) |])
-  y0 <- $(qDyn [| $(unqDyn [|dynRad|]) * (sin $(unqDyn [|t0|])) |])
-  x1 <- $(qDyn [| $(unqDyn [|dynRad|]) * (cos $(unqDyn [|t1|])) |])
-  y1 <- $(qDyn [| $(unqDyn [|dynRad|]) * (sin $(unqDyn [|t1|])) |])
-  dx <- combineDyn (-) x1 x0
-  dy <- combineDyn (-) y1 y0
-  d  <- $(qDyn [| ])
+          -> Dynamic t (Map String String)
+          -> m (Event t ())
+highLine' dynRng dynRad dynHeight extraAttrs = do
+  pathAttrs <- $(qDyn
+    [| let (th0,th1) = $(unqDyn [| dynRng |])
+           r         = $(unqDyn [| dynRad |])
+           h         = $(unqDyn [| dynHeight |])  :: Double
+           (x0,y0)   = (r * cos th0, r * sin th0)
+           (x1,y1)   = (r * cos th1, r * sin th1)
+           dx        = x1 - x0
+           dy        = y1 - y0
+           extras    = $(unqDyn [| extraAttrs |])
+           slopeX    = const 0 :: Double -> Double
+           slopeY th = (-1) * h * abs (circularDist th0 th1 / 2) :: Double
+           d = mconcat [ "M" <> show x0, show y0
+                       , "c", show (slopeX th0), show (slopeY th0) <> ","
+                       , show (slopeX th1 + dx), show (slopeY th1 + dy) <> ","
+                       , show (dx),              show (dy)
+                       ]
+         in "d" =: d <> extras
+    |])
+  svgElDynAttr "path" pathAttrs $ return ()
+  return never

@@ -222,10 +222,18 @@ collabLines m@Model{..} =
   let angs = memberAngles m
   in forM_ _modelProjects (projectLine angs)
 
+collabLines' :: MonadWidget t m => Dynamic t Model -> m ()
+collabLines' m = do
+  angs <- mapDyn memberAngles m
+  projs <- mapDyn _modelProjects m
+  simpleList projs (projectLine' angs)
+  return ()
+
 projectLine :: Map T.Text Double -> Project -> Svg ()
 projectLine angMap p@Project{..} =
   let thisAngs       = catMaybes $
-                       map (flip Map.lookup angMap) (map _memberName _projectMembers)
+                       map (flip Map.lookup angMap)
+                       (map _memberName _projectMembers)
       visLineAttrs   = [fill_ "none", stroke_ "yellow"
                        , stroke_width_ "2"]
       hidLineAttrs   = [fill_ "none", stroke_ "rgba(0,0,0,0)"
@@ -236,14 +244,36 @@ projectLine angMap p@Project{..} =
       collabLine a0 a1 = with (term "g")  lineGroupAttrs $ do
         dropShadow 0 0 2 "yellow" $ with (lineBase a0 a1) visLineAttrs
         with (lineBase a0 a1) hidLineAttrs
---        with (highLine a0 a1 (piRadiusMin figOpts) 100)
---        [fill_ "none", stroke_ "yellow"
---        , stroke_width_ "2px"
---        , id_ (textEncode (projectName))
---        , class_ "collabLine"]
   in mconcat [collabLine a0 a1 | a0 <- thisAngs
                                , a1 <- thisAngs
                                , a1 > a0]
+
+
+------------------------------------------------------------------------------
+projectLine' :: MonadWidget t m
+             => Dynamic t (Map T.Text Double)
+             -> Dynamic t Project
+             -> m ()
+projectLine' dynAngs dynProj = do
+  let findAngs angs p = catMaybes $ map (flip Map.lookup angs) (map _memberName $ _projectMembers p)
+  thisAngs     <- combineDyn findAngs dynAngs dynProj
+  angPairs     <- forDyn thisAngs $ \xs -> [(x,y) | x <- xs , y <- xs , y > x]
+  let visLineAttrs = "fill"         =: "none"
+                  <> "stroke"       =: "yellow"
+                  <> "stroke-width" =: "2"
+      hidLineAttrs = "fill"         =: "none"
+                  <> "stroke"       =: "rgba(0,0,0,0)"
+                  <> "stroke-width" =: "5"
+
+  gAttrs <- forDyn dynProj $ \p -> "id"    =: T.unpack (textEncode (_projectName p))
+                                <> "class" =: "collabLine"
+
+  simpleList angPairs $ \dynPair -> do
+    svgElDynAttr "g" gAttrs $ do
+      -- TODO shadow params
+      elShadow' defShadowParams $ highLine' dynPair (constDyn $ piRadiusMin figOpts) (constDyn 100) (constDyn visLineAttrs)
+      highLine' dynPair (constDyn $ piRadiusMin figOpts) (constDyn 100) (constDyn hidLineAttrs)
+  return ()
 
 
 ------------------------------------------------------------------------------
@@ -255,6 +285,13 @@ modelSvg m@Model{..} = do
     piWedges m
     memberDots m
   collabLines m
+
+modelSvg' :: MonadWidget t m => Dynamic t Model -> m ()
+modelSvg' m = do
+
+ elShadow' defShadowParams $ thrustWedges' m
+ elShadow' defShadowParams $ piWedges' m
+ collabLines' m
 
 ------------------------------------------------------------------------------
 data TextWedge = TextWedge {
