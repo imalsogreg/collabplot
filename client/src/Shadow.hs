@@ -72,7 +72,7 @@ data ShadowParams t = ShadowParams
 --defShadowParams :: MonadWidget t m => m (ShadowParams t)
 defShadowParams :: Reflex t => ShadowParams t
 defShadowParams = ShadowParams
-  (constDyn 0) (constDyn 0) (constDyn 4) (constDyn "rgba(0,0,0,1)")
+  (constDyn 4) (constDyn 4) (constDyn 1) (constDyn "rgba(0,0,0,1)")
 
 elShadow' :: MonadWidget t m
           => ShadowParams t

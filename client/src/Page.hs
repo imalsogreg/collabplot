@@ -58,6 +58,8 @@ pageWidget = mdo
     tws <- taurusInput
     svgTag (floor svgWidth) (floor svgHeight) $ do
       bkgnd'
+      piWedges' model
+      thrustWedges' model
       -- cicr <- elShadow' defShadowParams $ svgElAttr "circle" ("cx" =: "10" <> "cy" =: "10" <> "r" =: "50") $ return ()
       --taurusWedge' (constDyn (TaurusWedgeSpec 50 50 20 10 0 1)) False (constDyn ("fill" =: "red"))
       elShadow' defShadowParams $ taurusWedge' tws' False (constDyn ("fill" =: "red"))

@@ -13,6 +13,7 @@ import           Data.Maybe  (catMaybes)
 import           Data.Monoid
 import qualified Data.Text   as T
 import           Lucid.Svg
+import           Reflex.Dom
 import           CollabTypes
 import           Utils
 import           Primitives
@@ -65,7 +66,7 @@ piRanges m@Model{..} =
   Map.unions
   . flip map _modelThrusts $ \t@Thrust{..} ->
 
-  let 
+  let
 
       (thrustT0,thrustT1) = maybe (error "piAndOrphan impossible case") id
                             (Map.lookup t (thrustAngleRanges _modelThrusts) )
@@ -130,11 +131,37 @@ piWedge pName (rng@(th0,th1), childAngs) =
       [fill_ "hsl(100,50%,50%)", stroke_ "none"]
     textOnCircle pName [font_size_ "18"] (r0/2 + r1/2) ang (Just $ r1 - r0)
 
+piWedge' :: MonadWidget t m
+         => T.Text
+         -> Dynamic t (AngleRange, Map T.Text Double)
+         -> m (Event t ())
+piWedge' nm dynChildAngs = do
+  let r0 = piRadiusMin figOpts
+      r1 = piRadiusMax figOpts
+  tws <- forDyn dynChildAngs $ \(rng@(th0,th1), childAngs) ->
+           TaurusWedgeSpec 0 0 (piRadiusMin figOpts) (piRadiusMax figOpts)
+                           (angleFrac rng 0.5) (angleDiff rng)
+  taurusWedge' tws False (constDyn $ "fill"   =: "hsl(100,50%,50%)"
+                                  <> "stroke" =: "none")
+  dynAng <- forDyn dynChildAngs $ \(rng,_) -> angleFrac rng 0.5
+  textOnCircle' (constDyn $ T.unpack nm) (constDyn $ "font-size" =: "18pt")
+                (constDyn (r0/2 + r1/2)) dynAng (constDyn $ Just (r1 - r0))
+  return never
+
 piWedges :: Model -> Svg ()
 piWedges m = let piRngs   = piRanges m :: Map T.Text AngleRange
                  piMemberAngs = allPiMemberAngles m
                  piInfo = Map.intersectionWith (\a b -> (a,b)) piRngs piMemberAngs
              in mconcat . Map.elems $ Map.mapWithKey piWedge piInfo
+
+piWedges' :: MonadWidget t m => Dynamic t Model -> m ()
+piWedges' m = do
+  piRngs <- mapDyn piRanges m
+  piMemberAngs <- mapDyn allPiMemberAngles m
+  piInfo <- combineDyn (Map.intersectionWith (\a b -> (a,b)))
+            piRngs piMemberAngs
+  listViewWithKey piInfo piWedge'
+  return ()
 
 thrustWedge :: (Thrust, AngleRange) -> Svg ()
 thrustWedge (Thrust{..}, (th0, th1)) = do
@@ -146,10 +173,37 @@ thrustWedge (Thrust{..}, (th0, th1)) = do
           r1    = thrustRadiusMax figOpts
           ang   = angleFrac (th0,th1) 0.5
 
+thrustWedge' :: MonadWidget t m
+             => Thrust
+             -> Dynamic t AngleRange
+             -> m (Event t ())
+thrustWedge' thr dynRng = do
+  let r0 = thrustRadiusMin figOpts
+      r1 = thrustRadiusMax figOpts
+      twsAttrs = "fill" =: "hsl(100,50%,75%)" <> "stroke" =: "none"
+  dWidth   <- forDyn dynRng angleDiff
+  dAng     <- forDyn dynRng $ \r -> angleFrac r 0.5
+
+  tws      <- forDyn dynRng $ \r ->
+                TaurusWedgeSpec 0 0 r0 r1 (angleFrac r 0.5) (angleDiff r)
+  taurusWedge' tws False (constDyn twsAttrs)
+
+  textOnCircle' (constDyn (T.unpack $ _thrustName thr))
+                (constDyn $ "font-size" =: "18pt")
+                (constDyn $ r0/2 + r1/2) dAng (constDyn Nothing)
+  return never
+
+
 thrustWedges :: Model -> Svg ()
 thrustWedges Model{..} =
   let angMap = thrustAngleRanges _modelThrusts
   in  forM_  (Map.toList angMap) thrustWedge
+
+thrustWedges' :: MonadWidget t m => Dynamic t Model -> m ()
+thrustWedges' m = do
+  angMap <- mapDyn (thrustAngleRanges . _modelThrusts) m
+  listViewWithKey angMap thrustWedge'
+  return ()
 
 memberDot :: (T.Text, Double) -> Svg ()
 memberDot (mName, mAng) =

@@ -137,6 +137,55 @@ textOnCircle txt txtAttributes radius theta rayLength = g_ $ do
       pathName = mconcat ["Radius", f radius, "Theta", f theta]
       pathUrl  = "#" <> pathName
 
+textOnCircle' :: MonadWidget t m
+              => Dynamic t String
+              -> Dynamic t (Map String String)
+              -> Dynamic t Double
+              -> Dynamic t Double
+              -> Dynamic t (Maybe Double)
+              -> m ()
+textOnCircle' txt extraAttrs dynRad dynTheta dynMayRayLength = do
+
+  dynPathName <- combineDyn
+                 (\r t -> mconcat ["Radius", show r ,"Theta", show t])
+                 dynTheta dynRad
+
+  pathURL <- forDyn dynPathName $ \p -> '#':p
+
+  svgEl "defs" $ do
+    pathAttrs <- $(qDyn [| "id" =: $(unqDyn [| dynPathName |])
+                        <> "d"  =: d $(unqDyn [|dynRad|])
+                                     $(unqDyn [|dynTheta|])
+                                     $(unqDyn [|dynMayRayLength|]) |])
+    svgElDynAttr "path" pathAttrs $ return ()
+
+  useAttrs <- forDyn pathURL $ \u -> "xlinkHref" =: u <> "fill" =: "none"
+  svgElDynAttr "use" useAttrs $ return ()
+
+  let textAttrs = "font-family" =: "Verdana"
+               <> "font-size"   =: "20pt"
+               <> "text-anchor" =: "middle"
+  svgElAttr "text" textAttrs $ do
+
+    textPathAttrs <- forDyn pathURL $ \u -> "xlinkHref"         =: u
+                                         <> "startOffset"       =: "50%"
+                                         <> "dominant-baseline" =: "middle"
+    svgElDynAttr "textPath" textPathAttrs $ dynText txt
+
+    where
+      d radius theta rayLen = case rayLen of
+           -- When no ray length is given, put text on horizontal path
+           Nothing -> mconcat ["M",  show (radius * cos (theta - pi/3)), " "
+                              ,      show (radius * sin (theta - pi/3)), " "
+                              ,"A ", show radius, " ", show radius, " 0 0 1 "
+                              , show (radius * cos (theta + pi/3)), " "
+                              , show (radius * sin (theta + pi/3))
+                              ]
+           -- When ray length is given, put text on vertical path
+           Just r2 -> mconcat ["M", show ((radius - r2/2) * cos theta), " "
+                              ,     show ((radius - r2/2) * sin theta), " "
+                              ,"L ", show ((radius + r2/2) * cos theta), " "
+                              ,      show ((radius + r2/2) * sin theta)]
 
 ------------------------------------------------------------------------------
 highLine :: Double -> Double -> Double -> Double -> Svg ()
@@ -152,3 +201,19 @@ highLine th0 th1 radius height = path_ [d_ d]
                       ,     f (slopeX th1 + dx), f (slopeY th1 + dy) <> ","
                       ,     f (dx),         f (dy)
                       ]
+
+highLine' :: MonadWidget t m
+          -> Dynamic t (Double, Double)
+          -> Dynamic t Double
+          -> Dynamic t Double
+          -> m ()
+highLine' dynRng dynRad dynHeight = do
+  t0 <- mapDyn fst dynRng
+  t1 <- mapDyn snd dynRng
+  x0 <- $(qDyn [| $(unqDyn [|dynRad|]) * (cos $(unqDyn [|t0|])) |])
+  y0 <- $(qDyn [| $(unqDyn [|dynRad|]) * (sin $(unqDyn [|t0|])) |])
+  x1 <- $(qDyn [| $(unqDyn [|dynRad|]) * (cos $(unqDyn [|t1|])) |])
+  y1 <- $(qDyn [| $(unqDyn [|dynRad|]) * (sin $(unqDyn [|t1|])) |])
+  dx <- combineDyn (-) x1 x0
+  dy <- combineDyn (-) y1 y0
+  d  <- $(qDyn [| ])
