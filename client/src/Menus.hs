@@ -25,6 +25,16 @@ instance Monoid MField where
   mempty = MField ""
   MField a `mappend` MField b = MField (a <> ('\n' : b))
 
+visToggleBox :: MonadWidget t m => m () -> m a -> m a
+visToggleBox icon body =
+  elClass "div" "togglebox" $ do
+    (btn,_) <- elAttr' "div" ("class" =: "toggleicon") $ icon
+    isShowing <- toggle False (domEvent Click btn)
+    bodyAttrs <- forDyn isShowing $ \b ->
+      (  "class"      =: "togglebody"
+      <> bool "hidden" "visible" b =: "true")
+    elDynAttr "div" bodyAttrs body
+
 ------------------------------------------------------------------------------
 newPIBox :: (MonadWidget t m) => Dynamic t Model -> m (Event t PI)
 newPIBox dModel =

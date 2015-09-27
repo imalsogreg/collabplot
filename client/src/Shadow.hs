@@ -19,39 +19,6 @@ import Reflex.Dynamic.TH
 import Utils
 
 
-shadowDefs :: Double -> Double -> Double -> T.Text -> T.Text -> Svg ()
-shadowDefs x y blur color filtId = defs_ $ do
-  (term "filter") fParams $ do
-    feOffset_       [result_ "offOut", in_ "SourceAlpha"
-                    , dx_ (f x), dy_ (f y)]
-    --feColorMatrix_  [result_ "matrixOut", in_ "offOut"
-    --                , type_ "matrix"
-    --                , values_ "1 0 0 0 0   0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"]
-    feFlood_        [result_ "floodOut"
-                    , flood_color_ color
-                    , flood_opacity_ "1"]
-    feGaussianBlur_ [result_ "blurOut", in_ "offOut"
-                    , stdDeviation_ (f blur)]
-    feComposite_    [result_ "shadowOut"
-                    ,in_ "floodOut", in2_ "blurOut", operator_ "in"]
-    feBlend_        [in_ "SourceGraphic", in2_ "shadowOut", mode_ "normal"]
---    feGaussianBlur_ [result_ "blurOut", in_ "floodOut"
---                    , stdDeviation_ (f blur)]
---    feBlend_        [in_ "SourceGraphic", in2_ "blurOut"
---                    , mode_ "normal"]
-  where
-    fParams = [ id_ filtId , x_ "-0.5" , y_ "-0.5"
-              , width_ "200%" , height_ "200%"]
-
-r = f 5
-
-dropShadow x y blur color el = do
-  shadowDefs x y blur color filtName
-  with el [A.filter_ filtUrl]
-  where filtName = mconcat [ "shadowFiltX", f x, "Y", f y
-                           , "B", f blur, "C", color]
-        filtUrl = T.concat ["url(#", filtName, ")"]
-
 filtID :: MonadWidget t m => ShadowParams t -> m (Dynamic t String)
 filtID sp =
   $(qDyn [| mconcat ["shadowFiltX", fs      $(unqDyn[| _spX sp |])
@@ -74,15 +41,11 @@ defShadowParams :: Reflex t => ShadowParams t
 defShadowParams = ShadowParams
   (constDyn 4) (constDyn 4) (constDyn 1) (constDyn "rgba(0,0,0,1)")
 
-elShadow' :: MonadWidget t m
-          => ShadowParams t
-          -> m a
-          -> m a
-          -- -> String
-          -- -> Dynamic t (Map String String)
-          -- -> m (El t)
-elShadow' sp@ShadowParams{..} child = do
--- elShadow' sp@ShadowParams{..} nm attrs = do
+elShadow :: MonadWidget t m
+         => ShadowParams t
+         -> m a
+         -> m a
+elShadow sp@ShadowParams{..} child = do
 
   fID  <- filtID sp
   fURL <- forDyn fID $ \n -> "url(#" ++ n ++ ")"
@@ -124,5 +87,4 @@ elShadow' sp@ShadowParams{..} child = do
     svgElAttr    "feComposite"    filtElemCompositeAttrs $ return ()
     svgElAttr    "feBlend"        filtElemBlendAttrs     $ return ()
   e <- svgElDynAttr "g" gAttrs $ child
-  --(e, ()) <- svgElDynAttr' nm shadowedElAttrs $ return ()
   return e

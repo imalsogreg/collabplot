@@ -42,7 +42,7 @@ getModel = do
                      in  filter (\m -> _memberID m `elem` mIDs) members
       projects' :: [Project]
       projects' = map (\p -> p {_projectMembers = memsOfProj p}) projects
-  return $ Model thrusts projects'
+  return $ Model thrusts projects' [] Nothing
 
 getThrusts :: Handler App (AuthManager App) [Thrust]
 getThrusts = do
@@ -70,8 +70,8 @@ handleThrusts = method GET (getThrusts >>= writeJSON)
                 <|> method POST (requireMod >> postThrust)
   where postThrust = do
           InsThrust{..} <- reqJSON
-          [Only i] <- withTop db $ query "INSERT INTO thrust(name) VALUES (?)" (Only thrustName)
-          writeJSON (Thrust i thrustName [])
+          [Only i] <- withTop db $ query "INSERT INTO thrust(name) VALUES (?)" (Only ithrustName)
+          writeJSON (Thrust i ithrustName [])
 
 handleModel :: Handler App (AuthManager App) ()
 handleModel = do
@@ -119,11 +119,11 @@ handleMembers :: Handler App (AuthManager App) ()
 handleMembers = method GET (getMembers >>= writeJSON)
                 <|> method POST (requireMod >> insertMember)
   where insertMember = do
-          (InsMember mn mPI ws) <- reqJSON
+          (InsMember imn imPI iws) <- reqJSON
           [Only i] <- withTop db $ query
                       "INSERT INTO member(name,pi,website) VALUES (?,?,?) returning id;"
-                      (mn, mPI, ws)
-          writeJSON (Member i mn mPI ws)
+                      (imn, imPI, iws)
+          writeJSON (Member i imn imPI iws)
 
 handleMember :: Handler App (AuthManager App) ()
 handleMember = do

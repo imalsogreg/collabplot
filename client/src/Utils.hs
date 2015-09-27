@@ -10,17 +10,21 @@ import qualified Data.Text as T
 import           Lucid.Svg
 import           Reflex.Dom
 
-gTranslate :: Double -> Double -> Svg () -> Svg ()
-gTranslate dx dy content = with (g_ content) [transform_ transString]
-  where transString = mconcat $ ["translate(", f dx, ",", f dy, ")"]
-s :: (RealFrac a, Show a) => a -> T.Text
-s = T.pack . show . floor
 
-sR2 :: (RealFrac a, Show a) => (a,a) -> T.Text
-sR2 (x,y) = mconcat [s x, " ", s y]
+-- sR2 :: (RealFrac a, Show a) => (a,a) -> T.Text
+-- sR2 (x,y) = mconcat [s x, " ", s y]
 
 f :: (RealFrac a, Show a) => a -> T.Text
 f = T.pack . show
+
+fs :: Int -> String
+fs = show
+
+fls :: Double -> String
+fls = show
+
+pxf :: Double -> String
+pxf = (++"px") . show . floor
 
 fR2 :: (RealFrac a, Show a) => (a,a) -> T.Text
 fR2 (x,y) = mconcat [f x, " ", f y]
@@ -43,58 +47,75 @@ textEncode :: T.Text -> T.Text
 textEncode = T.pack . show . asWord64 . hash . T.unpack
 
 
-st :: String -> String
-st = id
+svgNS, xlinkNS :: String
+svgNS   = "http://www.w3.org/2000/svg"
+xlinkNS = "http://www.w3.org/1999/xlink"
 
-fs :: Int -> String
-fs = show
-
-fls :: Double -> String
-fls = show . round
-
-px :: Int -> String
-px = (<> "px") . show
-
-pxf :: Double -> String
-pxf = px . floor
-
-svgNS :: String
-svgNS = "http://www.w3.org/2000/svg"
 
 svgTag :: (MonadWidget t m) => Int -> Int -> m a -> m a
 svgTag width height child =
-  elC
-  (defElConfig {_elConfig_namespace= Just svgNS
-               ,_elConfig_attrs    = st "width" =: show width
-                                     <> "height" =: show height
+  elWith "svg"
+  (def {_elConfig_namespace= Just svgNS
+       ,_elConfig_attributes =  (Nothing, st "width")      =: show width
+                             <> (Nothing, "height")     =: show height
+                             <> (Nothing, "xmlns")      =: svgNS
+                             <> (Just (st "xmlns"), "xlink") =: xlinkNS
                })
-  "svg" child
+  child
+
+svgElDynAttrNS' :: MonadWidget t m
+                => String
+                -> Dynamic t (Map (Maybe String, String) String)
+                -> m a
+                -> m (El t, a)
+svgElDynAttrNS' = elNSDynAttrNS' (Just svgNS)
 
 mkSvg :: ElConfig a -> ElConfig a
 mkSvg e = e {_elConfig_namespace = Just svgNS}
 
+svgEl' :: MonadWidget t m => String -> m a -> m (El t, a)
+svgEl' nm child =
+  elWith' nm (def {_elConfig_namespace = Just svgNS}) $ child
+
 svgEl :: MonadWidget t m => String -> m a -> m a
 svgEl nm child =
-  elC (defElConfig {_elConfig_namespace = Just svgNS}) nm $ child
+  elWith nm (def {_elConfig_namespace = Just svgNS}) $ child
 
 svgElAttr:: MonadWidget t m => String -> Map String String -> m a -> m a
 svgElAttr string ats child = do
   (_,c) <- svgElAttr' string ats child
   return c
 
-svgElAttr' :: (MonadWidget t m, Attributes m attrs) => String -> attrs -> m a -> m (El t, a)
-svgElAttr' string ats child = let cfg = defElConfig { _elConfig_namespace = Just svgNS
-                                                    , _elConfig_attrs     = ats
-                                                    }
-                               in elC' cfg string child
+svgElAttr' :: (MonadWidget t m, Attributes m attrs)
+           => String
+           -> attrs
+           -> m a
+           -> m (El t, a)
+svgElAttr' string ats child =
+  let cfg =
+        def { _elConfig_namespace  = Just svgNS
+            , _elConfig_attributes = ats
+            }
+  in elWith' string cfg child
 
-svgElDynAttr' :: MonadWidget t m => String -> Dynamic t (Map String String) -> m a -> m (El t, a)
+svgElDynAttr' :: MonadWidget t m
+              => String
+              -> Dynamic t (Map String String)
+              -> m a
+              -> m (El t, a)
 svgElDynAttr' nm dynats child =
-  let cfg = defElConfig { _elConfig_namespace = Just svgNS
-                        , _elConfig_attrs     = dynats}
-  in elC' cfg nm child
+  let cfg = def { _elConfig_namespace  = Just svgNS
+                , _elConfig_attributes = dynats}
+  in elWith' nm cfg child
 
-svgElDynAttr :: MonadWidget t m => String -> Dynamic t (Map String String) -> m a -> m a
+svgElDynAttr :: MonadWidget t m
+             => String
+             -> Dynamic t (Map String String)
+             -> m a
+             -> m a
 svgElDynAttr nm dynats child = do
   (_,c) <- svgElDynAttr' nm dynats child
   return c
+
+st :: String -> String
+st = id

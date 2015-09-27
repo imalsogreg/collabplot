@@ -1,9 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module CollabTypes where
 
+import Control.Lens
 import Control.Monad (mzero)
 import qualified Data.Aeson as A
 import           Data.Aeson
@@ -12,13 +14,26 @@ import Data.UUID
 import qualified Data.UUID as UUID
 import GHC.Generics
 
-data Model = Model {
-    _modelThrusts :: [Thrust]
-  , _modelProjects :: [Project]
-  } deriving (Eq, Show, Generic)
 
-instance A.FromJSON Model where
-instance A.ToJSON   Model where
+data Member = Member {
+    _memberID :: UUID
+  , _memberName :: T.Text
+  , _memberPI :: UUID
+  , _memberSite :: Maybe T.Text
+  }deriving (Eq, Show, Ord, Generic)
+
+instance A.FromJSON Member where
+instance A.ToJSON   Member where
+
+
+data InsMember = InsMember {
+    imemberName :: T.Text
+  , imemberPI :: UUID.UUID
+  , imemberSite :: Maybe T.Text
+  } deriving (Eq, Ord, Show, Generic)
+
+instance FromJSON InsMember where
+instance ToJSON   InsMember where
 
 data Thrust = Thrust {
     _thrustID :: UUID
@@ -29,8 +44,9 @@ data Thrust = Thrust {
 instance A.FromJSON Thrust where
 instance A.ToJSON Thrust where
 
+
 data InsThrust = InsThrust {
-  thrustName :: T.Text
+  ithrustName :: T.Text
   } deriving (Eq, Ord, Show, Generic)
 
 instance FromJSON InsThrust where
@@ -48,34 +64,17 @@ data PI = PI {
 instance A.FromJSON PI where
 instance A.ToJSON   PI where
 
+makeLenses ''PI
+
 data InsPI = InsPI {
-    piName :: T.Text
-  , piThrust :: UUID.UUID
-  , piSite :: Maybe T.Text
+    ipiName :: T.Text
+  , ipiThrust :: UUID.UUID
+  , ipiSite :: Maybe T.Text
   } deriving (Eq, Ord, Show, Generic)
 
 instance A.ToJSON InsPI where
 instance A.FromJSON InsPI where
 
-
-data Member = Member {
-    _memberID :: UUID
-  , _memberName :: T.Text
-  , _memberPI :: UUID
-  , _memberSite :: Maybe T.Text
-  }deriving (Eq, Show, Ord, Generic)
-
-instance A.FromJSON Member where
-instance A.ToJSON   Member where
-
-data InsMember = InsMember {
-  memberName :: T.Text
-  , memberPI :: UUID.UUID
-  , memberSite :: Maybe T.Text
-  } deriving (Eq, Ord, Show, Generic)
-
-instance FromJSON InsMember where
-instance ToJSON   InsMember where
 
 
 
@@ -89,13 +88,28 @@ data Project = Project {
 instance A.FromJSON Project where
 instance A.ToJSON   Project where
 
+
 data InsProject = InsProject {
-  projectName :: T.Text
-  , projectSite :: Maybe T.Text
+    iprojectName :: T.Text
+  , iprojectSite :: Maybe T.Text
   } deriving (Eq, Ord, Show, Generic)
 
 instance FromJSON InsProject where
 instance ToJSON   InsProject where
+
+
+
+
+
+data Model = Model {
+    _modelThrusts    :: [Thrust]
+  , _modelProjects   :: [Project]
+  , _modelSelections :: [UUID]
+  , _modelFocus      :: Maybe PI
+  } deriving (Eq, Show, Generic)
+
+instance A.FromJSON Model where
+instance A.ToJSON   Model where
 
 
 instance A.FromJSON UUID where
@@ -106,3 +120,9 @@ instance A.FromJSON UUID where
 
 instance A.ToJSON UUID where
   toJSON = A.String . T.pack . UUID.toString
+
+
+makeLenses ''Model
+makeLenses ''Project
+makeLenses ''Member
+makeLenses ''Thrust

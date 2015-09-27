@@ -27,6 +27,7 @@ executable client
                        data-default,
                        data-hash,
                        HTTP,
+                       lens,
                        uuid,
                        ghcjs-dom,
                        lucid >= 2.9 && < 2.10,
