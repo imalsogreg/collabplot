@@ -47,15 +47,23 @@ pageWidget t0 = mdo
   tickTimes <- fmap _tickInfo_lastUTC <$> tickLossy 0.1 t0
   modelEvents <- fmapMaybe id <$> getAndDecode modelUrls
 
-  focusEvents <- fmap (fmapMaybe id) $ fmap (updated . nubDyn ) $ combineDyn
-                (\m opt -> _modelFocus m >>= flip Map.lookup (piAngles m opt))
-                model dynFigOpts
+
+  focusEvents    <- fmap (fmapMaybe id) $ fmap (updated . nubDyn) $
+                    mapDyn _modelFocus model
+  let focusModels     = tag (current model) focusEvents
+      focusModelsOpts = attach (current dynFigOpts) focusModels
+
+  dynFocusPI     <- mapDyn _modelFocus model
+  let figOptsAtFocus = attach (current dynFigOpts) focusEvents
+  let angEvents  = ffor focusModelsOpts $ \(figOpts, m) ->
+                     (_modelFocus m >>= flip Map.lookup (piAngles m figOpts))
+
 
   focusTimesAngles <- performEvent (fmap (\a -> do
                                             t <- liftIO getCurrentTime
-                                            return (t,a)) focusEvents)
+                                            return (t,a)) (fmapMaybe id angEvents))
 
-  let aux (t,a) p = MotionPlan t 1 (rEnd p) a
+  let aux (t,a) p = MotionPlan t 5 (rEnd p) a
       plan0 = MotionPlan (UTCTime (fromGregorian 2015 1 1) 0) 0 0 0
   dynMotionPlan <- foldDyn aux plan0 focusTimesAngles
 
@@ -64,11 +72,12 @@ pageWidget t0 = mdo
   lastMouseMove <- holdDyn (0,0) moves
 
   let timedPlans   = attach (current dynMotionPlan) tickTimes
-      angEvents    = (fmapMaybe id) $ ffor timedPlans (uncurry (flip runMotionPlan))
-      figOptEvents = ffor angEvents $ \ang -> defFigOpts {thrustThetaOffset = ang}
+      figAngEvents    = (fmapMaybe id) $ ffor timedPlans (uncurry (flip runMotionPlan))
+      figOptEvents = ffor figAngEvents $ \ang -> defFigOpts {thrustThetaOffset = ang}
 
-  --dynFigOpts <- holdDyn defFigOpts figOptEvents
-  dynFigOpts <- holdDyn defFigOpts (ffor tickTimes $ \t -> defFigOpts {thrustThetaOffset = realToFrac (diffUTCTime t t0)})
+  dynFigOpts <- holdDyn defFigOpts figOptEvents
+  --dynFigOpts <- holdDyn defFigOpts (ffor tickTimes $ \t -> defFigOpts {thrustThetaOffset = realToFrac (diffUTCTime t t0)})
+  display dynMotionPlan
   display dynFigOpts
 
   -- dynFigOpts <- forDyn lastMouseMove $ \(x,y) ->
@@ -132,10 +141,10 @@ data MotionPlan = MotionPlan
   , duration :: Double
   , rStart   :: Double
   , rEnd     :: Double
-  }
+  } deriving (Show)
 
 runMotionPlan :: UTCTime -> MotionPlan -> Maybe Double
 runMotionPlan t mp =
       let x  = realToFrac (diffUTCTime t (tStart mp))
-          y  = (rStart mp - rEnd mp) / (duration mp) * x
+          y  = rStart mp + (rStart mp - rEnd mp) / (duration mp) * (x)
       in  bool Nothing (Just y) (x < duration mp)
