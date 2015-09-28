@@ -36,6 +36,7 @@ executable client
                        reflex-dom,
                        reflex-dom-contrib,
                        text,
+                       time,
                        transformers,
                        unordered-containers,
                        vector,

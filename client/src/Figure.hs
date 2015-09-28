@@ -1,10 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes   #-}
+{-# LANGUAGE TypeFamilies   #-}
 
 module Figure where
 
 import           Control.Lens
+import           Data.Bool (bool)
 import           Data.Fixed  (mod')
 import           Data.Foldable
 import           Data.Traversable
@@ -15,6 +19,7 @@ import           Data.Monoid
 import qualified Data.Text   as T
 import           Data.UUID
 import           Lucid.Svg
+import           Reflex.Dynamic.TH
 import           Reflex.Dom
 import           CollabTypes
 import           Utils
@@ -32,10 +37,10 @@ data FigOpts = FigOpts {
   , thrustRadiusMax    :: Double
   , thrustThetaOffset  :: Double
   , collabRadius       :: Double
-  }
+  } deriving (Show)
 
-figOpts :: FigOpts
-figOpts = FigOpts {
+defFigOpts :: FigOpts
+defFigOpts = FigOpts {
     piMinWedgeWidth    = 0.1
   , piWedgeSpacing     = 0.05
   , thrustWedgeSpacing = 0.1
@@ -50,32 +55,32 @@ figOpts = FigOpts {
 
 
 ------------------------------------------------------------------------------
-thrustAngleRanges :: [Thrust] -> Map Thrust AngleRange
-thrustAngleRanges thrusts = Map.fromList $ zipWith f [0..] thrusts
+thrustAngleRanges :: FigOpts -> [Thrust] -> Map Thrust AngleRange
+thrustAngleRanges figOpts thrusts = Map.fromList $ zipWith f [0..] thrusts
   where f i thrustName = (thrustName, (theta0 i, theta1 i))
         n              = fromIntegral (length thrusts) :: Double
         wedgeInterval  = (2*pi) / n :: Double
-        theta0 i       = fromIntegral i * wedgeInterval
+        theta0 i       = fromIntegral i * wedgeInterval + thrustThetaOffset figOpts
         theta1 i       = theta0 i + wedgeInterval
-                         - thrustWedgeSpacing figOpts
+                         - thrustWedgeSpacing figOpts -- + thrustThetaOffset figOpts
 
 ------------------------------------------------------------------------------
 -- Make a map from PI name to
 -- angle in the circle. This gets a bit messy due to the need
 -- to build up intermediate maps for the invididual thrusts
-piRanges :: Model -> (Map PI AngleRange)
-piRanges m@Model{..} =
+piRanges :: Model -> FigOpts -> (Map PI AngleRange)
+piRanges m@Model{..} figOpts =
   Map.unions
   . flip map _modelThrusts $ \t@Thrust{..} ->
 
   let
 
       (thrustT0,thrustT1) = maybe (error "piAndOrphan impossible case") id
-                            (Map.lookup t (thrustAngleRanges _modelThrusts) )
+                            (Map.lookup t (thrustAngleRanges figOpts _modelThrusts) )
 
       n          = fromIntegral $ length _thrustPIs :: Double
 
-      thrustRngs = thrustAngleRanges _modelThrusts
+      thrustRngs = thrustAngleRanges figOpts _modelThrusts
       angRange   = (thrustT0,thrustT1)
 
       piWedgeWid = (angleDiff angRange - ((n-1) * piWedgeSpacing figOpts)) / n
@@ -89,23 +94,20 @@ piRanges m@Model{..} =
 
   in  piMap
 
-
--- ------------------------------------------------------------------------------
--- -- Map from PI name to names of children
--- allPiChildren :: Model -> Map T.Text [T.Text]
--- allPiChildren m@Model{..} =
---   let piChildren p = map _memberName $ _piMembers p
---   in  Map.fromList $ map (\p -> (_piName p, piChildren p))
---       (concatMap _thrustPIs _modelThrusts)
+------------------------------------------------------------------------------
+-- Map from PI to PI's central angle
+piAngles :: Model -> FigOpts -> Map PI Double
+piAngles m opts = Map.map (\rng -> angleFrac rng 0.5) (piRanges m opts)
 
 ------------------------------------------------------------------------------
 -- Map from PI to (Map from child to angle)
-allPiMemberAngles :: Model -> Map PI (Map Member Double)
-allPiMemberAngles m@Model{..} = Map.fromList $ map (\p -> (p, aux p)) (concatMap _thrustPIs _modelThrusts)
-  where aux p    = onePiMemberAngles m (piRanges m) p
+allPiMemberAngles :: Model -> FigOpts -> Map PI (Map Member Double)
+allPiMemberAngles m@Model{..} figOpts =
+  Map.fromList $ map (\p -> (p, aux p)) (concatMap _thrustPIs _modelThrusts)
+    where aux p    = onePiMemberAngles m figOpts (piRanges m figOpts) p
 
-onePiMemberAngles :: Model -> Map PI AngleRange -> PI -> Map Member Double
-onePiMemberAngles m@Model{..} piRanges p@PI{..} =
+onePiMemberAngles :: Model -> FigOpts -> Map PI AngleRange -> PI -> Map Member Double
+onePiMemberAngles m@Model{..} figOpts piRanges p@PI{..} =
   let range = maybe (error "onePiMemberAngles impossible case")
               id (Map.lookup p piRanges)
       cs    = _piMembers
@@ -115,29 +117,38 @@ onePiMemberAngles m@Model{..} piRanges p@PI{..} =
       fracs cs
 
 ------------------------------------------------------------------------------
-memberAngles :: Model -> Map Member Double
-memberAngles m@Model{..} =
+memberAngles :: Model -> FigOpts -> Map Member Double
+memberAngles m@Model{..} figOpts =
   let piRngs = piRanges m
-  in Map.unions (Map.elems (allPiMemberAngles m))
+  in Map.unions (Map.elems (allPiMemberAngles m figOpts))
 
 
 piWedge :: MonadWidget t m
-        => Dynamic t [UUID]
+        => Dynamic t FigOpts
+        -> Dynamic t [UUID]
         -> PI
         -> Dynamic t (AngleRange, Map Member Double)
         -> m (Event t (Model -> Model))
-piWedge dynBrights p@PI{..} dynChildAngs = do
-  let r0 = piRadiusMin figOpts
-      r1 = piRadiusMax figOpts
-  tws <- forDyn dynChildAngs $ \(rng@(th0,th1), childAngs) ->
-           TaurusWedgeSpec 0 0 (piRadiusMin figOpts) (piRadiusMax figOpts)
-                           (angleFrac rng 0.5) (angleDiff rng)
+piWedge dynOpts dynBrights p@PI{..} dynChildAngs = do
+  r0 <- mapDyn piRadiusMin dynOpts
+  r1 <- mapDyn piRadiusMax dynOpts
+  rMid <- combineDyn (\a b -> a/2 + b/2) r0 r1
+  rCen <- combineDyn (\a b -> Just (b - a)) r0 r1
+  tws <- combineDyn (\figOpts (rng@(th0,th1), childAngs) ->
+                        TaurusWedgeSpec 0 0
+                        (piRadiusMin figOpts) (piRadiusMax figOpts)
+                        (angleFrac rng 0.5) (angleDiff rng))
+         dynOpts dynChildAngs
   (g,_) <- svgEl' "g" $ do
-    taurusWedge tws False (constDyn $ "fill"   =: "hsl(100,50%,50%)"
-                                    <> "stroke" =: "none")
+    wedgeAttrs <- forDyn dynBrights $ \b ->
+      let isB = _piID `elem` b
+        in  "stroke" =: "none"
+         <> "fill"   =: bool "hsla(100,50%,50%,0.5)" "hsla(100,50%,50%,1)" isB
+         <> bool mempty ("class" =: "selected") isB
+    taurusWedge tws False wedgeAttrs
     dynAng <- forDyn dynChildAngs $ \(rng,_) -> angleFrac rng 0.5
     textOnCircle (constDyn $ T.unpack _piName) (constDyn $ "font-size" =: "10pt")
-                  (constDyn (r0/2 + r1/2)) dynAng (constDyn $ Just (r1 - r0))
+                  rMid dynAng rCen
   let c = domEvent Click g
   return $ (\m -> m & set modelSelections [_piID]
                     & set modelFocus (Just p)) <$ c
@@ -145,57 +156,72 @@ piWedge dynBrights p@PI{..} dynChildAngs = do
 foldThroughMap :: Map a (Model -> Model) -> (Model -> Model)
 foldThroughMap m = flip (foldr ($)) . Map.elems $ m
 
-piWedges :: MonadWidget t m => Dynamic t Model -> m (Event t (Model -> Model))
-piWedges m = do
-  piRngs <- mapDyn piRanges m
+piWedges :: MonadWidget t m
+         => Dynamic t Model
+         -> Dynamic t FigOpts
+         -> m (Event t (Model -> Model))
+piWedges m dynOpts = do
+  piRngs <- combineDyn piRanges m dynOpts
   brights <- mapDyn _modelSelections m
-  piMemberAngs <- mapDyn allPiMemberAngles m
+  piMemberAngs <- combineDyn allPiMemberAngles m dynOpts
   piInfo <- combineDyn (Map.intersectionWith (\a b -> (a,b)))
             piRngs piMemberAngs
-  e <- listViewWithKey piInfo (piWedge brights)
+  e <- listViewWithKey piInfo (piWedge dynOpts brights)
   return $ fmap foldThroughMap e
 
 
 thrustWedge :: MonadWidget t m
-            => Thrust
+            => Dynamic t FigOpts
+            -> Thrust
             -> Dynamic t AngleRange
             -> m (Event t ())
-thrustWedge thr dynRng = do
-  let r0 = thrustRadiusMin figOpts
-      r1 = thrustRadiusMax figOpts
-      twsAttrs = "fill" =: "hsl(100,50%,75%)" <> "stroke" =: "none"
+thrustWedge dynOpts thr dynRng = do
+  r0 <- mapDyn thrustRadiusMin dynOpts
+  r1 <- mapDyn thrustRadiusMax dynOpts
+  rMid <- combineDyn (\a b -> a/2 + b/2) r0 r1
+  let twsAttrs = "fill" =: "hsl(100,50%,75%)" <> "stroke" =: "none"
   dWidth   <- forDyn dynRng angleDiff
   dAng     <- forDyn dynRng $ \r -> angleFrac r 0.5
 
-  tws      <- forDyn dynRng $ \r ->
-                TaurusWedgeSpec 0 0 r0 r1 (angleFrac r 0.5) (angleDiff r)
+  --tws      <- forDyn dynRng $ \r ->
+  --              TaurusWedgeSpec 0 0 r0 r1 (angleFrac r 0.5) (angleDiff r)
+  tws      <- $(qDyn [| let r   = $(unqDyn [|dynRng|])
+                        in  TaurusWedgeSpec 0 0
+                              $(unqDyn [|r0|]) $(unqDyn [|r1|])
+                              (angleFrac r 0.5) (angleDiff r)
+                     |])
   taurusWedge tws False (constDyn twsAttrs)
 
   textOnCircle (constDyn (T.unpack $ _thrustName thr))
                (constDyn $ "font-size" =: "6pt")
-               (constDyn $ r0/2 + r1/2) dAng (constDyn Nothing)
+               rMid dAng (constDyn Nothing)
   return never
 
 
 
-thrustWedges :: MonadWidget t m => Dynamic t Model -> m ()
-thrustWedges m = do
-  angMap <- mapDyn (thrustAngleRanges . _modelThrusts) m
-  listViewWithKey angMap thrustWedge
+thrustWedges :: MonadWidget t m => Dynamic t Model -> Dynamic t FigOpts -> m ()
+thrustWedges dynModel dynOpts = do
+  --angMap <- mapDyn (thrustAngleRanges . _modelThrusts) m
+  angMap <- combineDyn (\m f -> thrustAngleRanges f (_modelThrusts m)) dynModel dynOpts
+  listViewWithKey angMap (thrustWedge dynOpts)
   return ()
 
 collabLines :: MonadWidget t m
             => Dynamic t Model
+            -> Dynamic t FigOpts
             -> m (Event t (Model -> Model))
-collabLines m = do
-  angs  <- mapDyn memberAngles m
+collabLines m dynOpts = do
+  angs  <- combineDyn memberAngles m dynOpts
   projs <- mapDyn _modelProjects m
-  projsAngs <- combineDyn projAngles projs angs
-  events <- listViewWithKey projsAngs projectLine
+  projsAngs <- $(qDyn [| projAngles $(unqDyn [|dynOpts|])
+                                    $(unqDyn [|projs|])
+                                    $(unqDyn [|angs|])
+                       |])
+  events <- listViewWithKey projsAngs (projectLine dynOpts)
   return $ fmap (flip (foldr ($)) . Map.elems) events
 
-projAngles :: [Project] -> Map Member Double -> Map Project [(Member,Double)]
-projAngles projs memberAngles =
+projAngles :: FigOpts -> [Project] -> Map Member Double -> Map Project [(Member,Double)]
+projAngles figOpts projs memberAngles =
   Map.fromList $ flip map projs $ \p@Project{..} ->
     let projAngs = Map.toList $ Map.filterWithKey
                                 (\m _ -> m `elem` _projectMembers)
@@ -203,10 +229,11 @@ projAngles projs memberAngles =
     in (p,projAngs)
 ------------------------------------------------------------------------------
 projectLine :: MonadWidget t m
-            => Project
+            => Dynamic t FigOpts
+            -> Project
             -> Dynamic t [(Member,Double)]
             -> m (Event t (Model -> Model))
-projectLine proj dynAngs = do
+projectLine dynOpts proj dynAngs = do
   let findAngs angs p = catMaybes $ map (flip Map.lookup angs) (_projectMembers p)
   thisAngs     <- forDyn dynAngs (map snd)
   thisMembers  <- forDyn dynAngs (map fst)
@@ -221,21 +248,27 @@ projectLine proj dynAngs = do
   let gAttrs = st "id"    =: T.unpack (textEncode (_projectName proj))
             <>    "class" =: "collabLine"
 
+  rMin <- mapDyn piRadiusMin dynOpts
+  rMax <- mapDyn piRadiusMax dynOpts
   (g,_) <- svgElDynAttr' "g" (constDyn gAttrs) $ simpleList angPairs $ \dynPair -> do
     let glowParams = ShadowParams (constDyn 0) (constDyn 0) (constDyn 3)
                      (constDyn "rgba(255,255,0,1)")
-    elShadow glowParams $ highLine dynPair (constDyn $ piRadiusMin figOpts) (constDyn 100) (constDyn visLineAttrs)
-    highLine dynPair (constDyn $ piRadiusMin figOpts) (constDyn 100) (constDyn hidLineAttrs)
+    elShadow glowParams $ highLine dynPair rMin (constDyn 100) (constDyn visLineAttrs)
+    highLine dynPair rMin (constDyn 100) (constDyn hidLineAttrs)
   let c = domEvent Click g
   return $ set modelSelections [_projectID proj] <$ c
 
 
-modelSvg :: MonadWidget t m => Dynamic t Model -> m (Event t (Model -> Model))
-modelSvg m = do
+modelSvg :: MonadWidget t m => Dynamic t Model -> Dynamic t FigOpts -> m (Event t (Model -> Model))
+modelSvg m dynOpts = do
 
- elShadow defShadowParams $ thrustWedges m
- piEvents <- elShadow defShadowParams $ piWedges m
- liEvents <- collabLines m
+ elShadow defShadowParams $ thrustWedges m dynOpts
+ --thrustWedges m dynOpts
+ piEvents <- elShadow defShadowParams $ piWedges m dynOpts
+ --piEvents <- return never
+ --piEvents <- piWedges m dynOpts
+ liEvents <- collabLines m dynOpts
+ --liEvents <- return never
 
  return $ leftmost [piEvents, liEvents]
 

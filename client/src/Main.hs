@@ -10,6 +10,7 @@ import qualified Data.ByteString.Lazy       as BSL
 import           Data.Fixed                 (mod')
 import           Data.Monoid
 import qualified Data.Text                  as T
+import           Data.Time
 import           Data.Traversable
 import           Figure
 import           Lucid                      as L
@@ -31,13 +32,14 @@ import           Menus
 ------------------------------------------------------------------------------
 main :: IO ()
 main = do
+  t0 <- getCurrentTime
   runWebGUI $ \webView -> do
     doc <- waitUntilJust $ liftM (fmap castToHTMLDocument) $
            webViewGetDomDocument webView
     let btag = "reflex-area" :: String
     root <- waitUntilJust $ liftM (fmap castToHTMLElement) $
             documentGetElementById doc btag
-    attachWidget root webView pageWidget
+    attachWidget root webView (pageWidget t0)
 
 waitUntilJust :: IO (Maybe a) -> IO a
 waitUntilJust a = do

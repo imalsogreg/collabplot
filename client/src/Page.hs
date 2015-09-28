@@ -8,19 +8,22 @@
 module Page where
 
 import qualified Data.Aeson as A
+import Data.Bool
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString as BS
 import Data.Default
 import Data.Foldable
+import qualified Data.Map as Map
 import Data.Monoid
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.Lazy as TL
-import Lucid
-import qualified Lucid as L
-import qualified Lucid.Svg as LSvg
-import Lucid.Svg (Svg(..), renderText)
+import Data.Time
+--import Lucid
+--import qualified Lucid as L
+--import qualified Lucid.Svg as LSvg
+--import Lucid.Svg (Svg(..), renderText)
 import CollabTypes
 import Utils
 import Network.HTTP.Base (urlEncode, urlDecode)
@@ -31,8 +34,8 @@ import Shadow
 import Menus
 import Reflex.Dom
 
-pageWidget :: MonadWidget t m => m ()
-pageWidget = mdo
+pageWidget :: MonadWidget t m => UTCTime -> m ()
+pageWidget t0 = mdo
 
   pb <- getPostBuild
   let  modelUrls = "/model" <$ (leftmost [pb
@@ -40,10 +43,40 @@ pageWidget = mdo
                                          , () <$ memberUpdates
                                          , () <$ projectUpdates
                                          ])
+
+  tickTimes <- fmap _tickInfo_lastUTC <$> tickLossy 0.1 t0
   modelEvents <- fmapMaybe id <$> getAndDecode modelUrls
+
+  focusEvents <- fmap (fmapMaybe id) $ fmap (updated . nubDyn ) $ combineDyn
+                (\m opt -> _modelFocus m >>= flip Map.lookup (piAngles m opt))
+                model dynFigOpts
+
+  focusTimesAngles <- performEvent (fmap (\a -> do
+                                            t <- liftIO getCurrentTime
+                                            return (t,a)) focusEvents)
+
+  let aux (t,a) p = MotionPlan t 1 (rEnd p) a
+      plan0 = MotionPlan (UTCTime (fromGregorian 2015 1 1) 0) 0 0 0
+  dynMotionPlan <- foldDyn aux plan0 focusTimesAngles
+
   let modelEventCommands = fmap (const) modelEvents -- TODO right, given foldr?
-  --let b = modelEvents :: Int
-  --let a = modelEventCommands :: Int
+
+  lastMouseMove <- holdDyn (0,0) moves
+
+  let timedPlans   = attach (current dynMotionPlan) tickTimes
+      angEvents    = (fmapMaybe id) $ ffor timedPlans (uncurry (flip runMotionPlan))
+      figOptEvents = ffor angEvents $ \ang -> defFigOpts {thrustThetaOffset = ang}
+
+  --dynFigOpts <- holdDyn defFigOpts figOptEvents
+  dynFigOpts <- holdDyn defFigOpts (ffor tickTimes $ \t -> defFigOpts {thrustThetaOffset = realToFrac (diffUTCTime t t0)})
+  display dynFigOpts
+
+  -- dynFigOpts <- forDyn lastMouseMove $ \(x,y) ->
+  --   defFigOpts { thrustRadiusMin = 255
+  --              , thrustRadiusMax = fromIntegral y
+  --              , thrustThetaOffset = fromIntegral x / 100}
+  --dynMotionPlan <- foldDyn ($) Nothing (leftmost [])
+  --dynFigOpts <- foldDyn (\)
 
   model <- foldDyn id -- (flip (foldr ($)))
                    (Model [] [] [] Nothing)
@@ -58,14 +91,16 @@ pageWidget = mdo
   -- menuEvents <- menusWidget pictureEvents
   -- infoWidget menuEvents
 
-  (_,svgEvents) <- elAttr' "div" ("class" =: "main-figure") $ do
+  (fig,svgEvents) <- elAttr' "div" ("class" =: "main-figure") $ do
 
     svgEvents <- svgTag (floor svgWidth) (floor svgHeight) $ do
       bkgnd
       svgElAttr "g" ("transform" =: "translate(400 400)") $
-        modelSvg model
-    display model
+        modelSvg model dynFigOpts
+    --display model
     return svgEvents
+
+  let moves = domEvent Mousemove fig
 
   return ()
 
@@ -91,3 +126,16 @@ bkgnd = do
                  <> "width" =: pxf svgWidth
                  <> "height" =: pxf svgHeight
                  <> "fill" =: "url(#bkgndGradient)") $ return ()
+
+data MotionPlan = MotionPlan
+  { tStart :: UTCTime
+  , duration :: Double
+  , rStart   :: Double
+  , rEnd     :: Double
+  }
+
+runMotionPlan :: UTCTime -> MotionPlan -> Maybe Double
+runMotionPlan t mp =
+      let x  = realToFrac (diffUTCTime t (tStart mp))
+          y  = (rStart mp - rEnd mp) / (duration mp) * x
+      in  bool Nothing (Just y) (x < duration mp)

@@ -81,7 +81,11 @@ svgEl :: MonadWidget t m => String -> m a -> m a
 svgEl nm child =
   elWith nm (def {_elConfig_namespace = Just svgNS}) $ child
 
-svgElAttr:: MonadWidget t m => String -> Map String String -> m a -> m a
+svgElAttr :: MonadWidget t m
+          => String
+          -> Map String String
+          -> m a
+          -> m a
 svgElAttr string ats child = do
   (_,c) <- svgElAttr' string ats child
   return c
