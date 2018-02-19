@@ -49,14 +49,14 @@ pageWidget t0 = mdo
 
 
   focusEvents    <- fmap (fmapMaybe id) $ fmap (updated . nubDyn) $
-                    mapDyn _modelFocus model
+                    mapDyn _focus model
   let focusModels     = tag (current model) focusEvents
       focusModelsOpts = attach (current dynFigOpts) focusModels
 
-  dynFocusPI     <- mapDyn _modelFocus model
+  dynFocusPI     <- mapDyn _focus model
   let figOptsAtFocus = attach (current dynFigOpts) focusEvents
   let angEvents  = ffor focusModelsOpts $ \(figOpts, m) ->
-                     (_modelFocus m >>= flip Map.lookup (piAngles m figOpts))
+                     (_focus m >>= flip Map.lookup (piAngles m figOpts))
 
 
   focusTimesAngles <- performEvent (fmap (\a -> do

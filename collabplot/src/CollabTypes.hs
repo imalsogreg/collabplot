@@ -104,8 +104,7 @@ instance ToJSON   InsProject where
 data Model = Model {
     _modelThrusts    :: [Thrust]
   , _modelProjects   :: [Project]
-  , _modelSelections :: [UUID]
-  , _modelFocus      :: Maybe PI
+
   } deriving (Eq, Show, Generic)
 
 instance A.FromJSON Model where
